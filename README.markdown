@@ -1,15 +1,17 @@
 # OpenMC-Dash-Interface
 Status: 
 
-![alt text](https://github.com/SterlingButters/OpenMC-Dash-InterFace/blob/master/Demo.png)
+![alt text](https://github.com/SterlingButters/OpenMC-Dash-InterFace/blob/master/examples/Demo.png)
+![alt text](https://github.com/SterlingButters/OpenMC-Dash-InterFace/blob/master/examples/Score.png)
 
-##Summary
+
+## Summary
 I've been wanting to do a project using Dash now for some time. I've decided to attempt to replicate (more or less) 
 ERSN for OpenMC (Open Source Monte Carlo Neutron Transport Code) but using Dash. This project will create a GUI for 
 setting up OpenMC simulations, running them, and depicting the results. Dash is pythonic way of coding HTML and Js with 
 callbacks. Clone the project and run `main.py` in the main directory.
 
-###Desired 1st release features
+### Desired 1st release features
 ##### Materials:
 ##### Geometry:
 - Cell region select feature
