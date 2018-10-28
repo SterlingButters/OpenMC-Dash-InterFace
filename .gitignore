@@ -1,0 +1,8 @@
+
+tallies.out
+statepoint.*
+*.html
+*.h5
+.idea/
+.DS_Store
+

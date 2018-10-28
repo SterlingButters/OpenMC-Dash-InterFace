@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<plots>
+    <plot basis="xy" color_by="material" filename="Full-Core" id="10001" type="slice">
+        <origin>0.0 0.0 0.0</origin>
+        <width>498.0 498.0</width>
+        <pixels>3000 3000</pixels>
+    </plot>
+</plots>
