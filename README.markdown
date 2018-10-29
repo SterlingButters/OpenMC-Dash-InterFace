@@ -1,5 +1,16 @@
 # OpenMC-Dash-Interface
-Status: 
+Status: This project has been put on hold due to the lack interactivity allowable by Dash. Since OpenMC is coupled so 
+intensely to the interactivity of the interface, I cannot make further progress until issues such as the following are 
+addressed:
+
+- [Component property 'figure' will not update hover-text for go.Heatmap object](https://github.com/plotly/dash/issues/235) 
+- [Can same component id reside in input/state and output simultaneously?](https://community.plot.ly/t/can-same-component-id-reside-in-input-state-and-output-simultaneously/9125/14) 
+
+The problem, specifically, is that it is difficult to code around an object or function whose attributes can serve as both 
+*Inputs* and *Outputs*. It seems Dash is supposed to be to handle this sort of thing though I have not found a working 
+solution as of yet. In addition, OpenMC objects cannot be handled in client-side javascript thus they must be globally stored
+in Python which is not recommended if individual user sessions are desired (which they might be in the future). The 
+combination of these obstacles and the notable issues above encourage a temporary hold until functionality can be created. 
 
 ![alt text](https://github.com/SterlingButters/OpenMC-Dash-InterFace/blob/master/examples/Demo.png)
 ![alt text](https://github.com/SterlingButters/OpenMC-Dash-InterFace/blob/master/examples/Score.png)
