@@ -4,24 +4,16 @@ import dash_html_components as html
 from dash.dependencies import Output, State, Input
 
 import plotly.graph_objs as go
-import plotly.figure_factory as ff
 
 import openmc
 import openmc.model
 import openmc.mgxs
 
-import pandas as pd
 import numpy as np
-from glob import glob
-import os.path
-import time
 import re
 import pickle
-import json
 import redis
-from PIL import Image
-from contextlib import redirect_stdout
-import io
+
 
 # Add Periodic Table Data
 element = [['Hydrogen', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'Helium'],
@@ -315,6 +307,7 @@ store_object('model', openmc.model.Model())
 
 #######################################################################################################################
 # Materials Interface
+
 
 # Invoke material options
 @app.callback(
