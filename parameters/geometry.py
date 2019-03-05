@@ -30,11 +30,10 @@ app.layout = html.Div([
                 'font-size': '4.0rem',
                 'color': '#4D637F'
             }),
-
+    html.Div(style=dict(height=20)),
     ################################################################################
-    html.Br(),
 
-    # dcc.Store(id='geometry-stores', storage_type='session'),
+    dcc.Store(id='geometry-stores', storage_type='session'),
     html.P("""
         Second, we need to create our geometries. As an overview, since this interface currently
         only supports geometry settings for a standard PWR/BWR i.e. radial planes for fuel 
@@ -43,6 +42,8 @@ app.layout = html.Div([
         be able to create a rectangular lattice from a selected pin cell and then make individual selections
         to replace those cell regions for which you would prefer a different configuration.  
            """),
+    html.H3('Cells'),
+
     html.Div([
         html.Div([
             html.H6("List of Planes"),
@@ -92,14 +93,23 @@ app.layout = html.Div([
     ], style=dict(
         width='100%',
         display='table',
-        ),
+    ),
     ),
 
+    dcc.Input(id='cell-name', placeholder='Enter Cell Name',
+              type='text'),
     html.Button('Commit Configuration to Memory', id='store-cell-button'),
-    html.Br(),
+    html.Div(style=dict(height=30)),
 
-    dcc.Graph(id='assembly-graph'),
-    dcc.Dropdown(id='full-assembly-dropdown'),
+    html.H3('Assemblies'),
+    html.P("""
+        Now that a cell has been successfully created, it is now available for selection in the 
+        dropdown below. The selection made from this cell will create an assembly based on the specifications
+        of the selected cell. Don't worry, you will be able to pick and choose individual cells to change 
+        their specifications if needed e.g. control rods, water holes, etc.
+           """),
+    html.H6('Cell Selection'),
+    dcc.Dropdown(id='cell-dropdown'),
     dcc.Input(id='assembly-x-dimension', placeholder='Enter assembly x-width dimension',
               type='number', value=25),
     dcc.Input(id='assembly-y-dimension', placeholder='Enter assembly y-width dimension',
@@ -108,7 +118,10 @@ app.layout = html.Div([
               type='number', value=17),
     dcc.Input(id='assembly-y-number', placeholder='Enter fuel pins in y-dimension',
               type='number', value=17),
+    dcc.Graph(id='assembly-graph'),
+    html.Div(style=dict(height=30)),
 
+    html.H3('Boundaries'),
     html.Button('Set Geometrical Boundaries', id='whole-geometry-button', n_clicks=0),
     html.Div(id='whole-geometry-config-container'),
 ])
@@ -135,7 +148,7 @@ def add_color(click, color, name, options):
         return options
 
 
-# Graph Selections
+# Graph Cell from Inputs
 @app.callback(
     Output('cell-graph', 'figure'),
     [Input('planes-list', 'value'),
@@ -152,16 +165,10 @@ def create_cell(planes, materials, colors):
     y = np.linspace(-edge, edge, 250)
 
     colorscale = [[0, 'rgb(255, 255, 255)']]
-
     if colors is not None and len(colors) >= 1:
         values = np.linspace(0, 1, len(colors) + 1)[1:]
-
         for value in range(len(colors)):
             colorscale.append([values[value], colors[value]])
-
-    # TODO: NEED A BASELINE COLOR i.e. somewhere in the heatmap there must be z=0 or white -> try to do this
-    #       outside of view
-    print(colorscale)
 
     regions = []
     cell_hover = []
@@ -180,19 +187,18 @@ def create_cell(planes, materials, colors):
                 # For Color
                 if colors is not None:
                     row.append(values[0])
-                    print(values[0])
                 else:
                     row.append(0)
 
             if np.sqrt(i ** 2 + j ** 2) > planes[-1]:
-                if -visible_edge < i < visible_edge and -visible_edge < j < visible_edge:
-                    # For HoverText
-                    if materials is not None and len(materials) > len(planes):
-                        text_row.append(materials[-1])
-                    else:
-                        text_row.append('Region {}'.format(len(planes) + 1))
+                # For HoverText
+                if materials is not None and len(materials) > len(planes):
+                    text_row.append(materials[-1])
+                else:
+                    text_row.append('Region {}'.format(len(planes) + 1))
 
-                    # For Colors
+                # For Colors
+                if -visible_edge < i < visible_edge and -visible_edge < j < visible_edge:
                     if colors is not None and len(colors) > len(planes):
                         row.append(values[-1])
                     else:
@@ -211,7 +217,7 @@ def create_cell(planes, materials, colors):
                 # For Colors
                 if planes[k] < np.sqrt(i ** 2 + j ** 2) < planes[k + 1]:
                     if colors is not None and len(colors) > 1:
-                        row.append(values[k+1])
+                        row.append(values[k + 1])
                     else:
                         row.append(0)
 
@@ -257,113 +263,166 @@ def create_cell(planes, materials, colors):
     return figure
 
 
+# Commit Cell to memory
+@app.callback(
+    Output('geometry-stores', 'data'),
+    [Input('store-cell-button', 'n_clicks')],
+    [State('cell-name', 'value'),
+     State('planes-list', 'value'),
+     State('material-dropdown', 'value'),
+     State('colors-dropdown', 'value'),
+     State('geometry-stores', 'data')]
+)
+def store_cell(clicks, name, planes, materials, colors, data):
+    if clicks is None:
+        raise PreventUpdate
+
+    planes = [float(plane) for plane in planes.split(',')]
+    planes.sort()
+
+    data = data or {}
+
+    data.update({'{}'.format(name): {'radii': planes,
+                                     'materials': materials,
+                                     'colors': colors}})
+
+    return data
+
+
+# Disable Button to commit cell to memory if missing Information
+@app.callback(
+    Output('store-cell-button', 'disabled'),
+    [Input('cell-name', 'value'),
+     Input('planes-list', 'value'),
+     Input('material-dropdown', 'value')]
+)
+def disable_button(name, planes, materials):
+    if planes is None:
+        print("Must have at least one plane")
+    else:
+        planes = [float(plane) for plane in planes.split(',')]
+        planes.sort()
+
+    if len(planes) > 0 and materials is not None and len(materials) == len(planes) + 1 and name is not None:
+        return False
+    else:
+        return True
+
+
+#
+@app.callback(
+    Output('cell-dropdown', 'options'),
+    [Input('geometry-stores', 'modified_timestamp')],
+    [State('geometry-stores', 'data')]
+)
+def store_cell(timestamp, data):
+    if timestamp is None:
+        raise PreventUpdate
+
+    if data:
+        labels = data.keys()
+        print(labels)
+
+        options = [{'label': label, 'value': label} for label in labels]
+
+        print(data)
+
+        return options
+
+
 #######################################################################################################################
 
-# # Fill Assembly
-# @app.callback(
-#     Output('assembly-graph', 'figure'),
-#     [Input('assembly-x-dimension', 'value'),
-#      Input('assembly-y-dimension', 'value'),
-#      Input('assembly-x-number', 'value'),
-#      Input('assembly-y-number', 'value'),
-#      Input('planes-list-1', 'value'),
-#      Input('assembly-graph', 'clickData')
-#      # Input('full-assembly-dropdown', 'value'),
-#      ]
-# )
-# def fill_assembly(assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, planes, clickData):
-#
-#     planes = [float(plane) for plane in planes.split(',')]
-#     planes.sort()
-#     planes = planes[::-1]
-#
-#     pitch_x = assembly_dim_x/assembly_num_x
-#     pitch_y = assembly_dim_y/assembly_num_y
-#
-#     # TODO, if dimensions and quanitities are insensible, limit and explain to user
-#     # if planes[0]*assembly_num_x > assembly_dim_x \
-#     #     or planes[0]*assembly_num_y > assembly_dim_y:
-#     #         assembly_dim_x = planes[0]*assembly_num_x
-#     #         assembly_dim_y = planes[0]*assembly_num_y
-#
-#     assembly_region = np.ones((assembly_num_y, assembly_num_x))
-#
-#     # Display universe name and location
-#     assembly_hover = []
-#     for a in range(assembly_dim_y):
-#         row = []
-#         for b in range(assembly_dim_x):
-#             row.append('Universe')
-#         assembly_hover.append(row)
-#
-#     # Invert Matrices
-#     assembly_hover = assembly_hover[::-1]
-#
-#     shapes = []
-#     SHAPES = restore_object('all-shapes')
-#     for outer in planes:
-#         # TODO: Use Markers instead of shapes
-#         color = 'rgb({}, {}, {}'.format(outer*255, outer*255, outer*255)
-#         for a in range(assembly_num_y):
-#             for b in range(assembly_num_x):
-#                 shape = {
-#                     'type': 'circle',
-#                     'x0': b - outer/pitch_x / 2,
-#                     'y0': a - outer/pitch_y / 2,
-#                     'x1': b - outer/pitch_x / 2 + outer/pitch_x,
-#                     'y1': a - outer/pitch_y / 2 + outer/pitch_y,
-#                     'fillcolor': color,
-#                     'opacity': .5
-#                 }
-#
-#                 SHAPES.append(shape)
-#                 shapes.append(shape)
-#
-#     click_x = click_y = None
-#     if clickData is not None:
-#         if 'points' in clickData:
-#             point = clickData['points'][0]
-#
-#             if 'x' in point:
-#                 click_x = point['x']
-#             if 'y' in point:
-#                 click_y = point['y']
-#
-#         if (click_x, click_y) not in SELECTED_CELLS:
-#
-#
-#         else:
-#
-#     print(SELECTED_CELLS)
-#
-#     layout = dict(
-#         title='Assembly Depiction',
-#         height=1000,
-#         width=1000,
-#
-#         xaxis=dict(
-#             range=[-(planes[0]/2 + (pitch_x-planes[0])/2), assembly_num_x],  # pitch_x*assembly_num_x
-#             showgrid=False,
-#             zeroline=False
-#         ),
-#         yaxis=dict(
-#             range=[-(planes[0] / 2 + (pitch_y - planes[0]) / 2), assembly_num_y],
-#             showgrid=False,
-#             zeroline=False
-#         ),
-#         shapes=shapes,
-#     )
-#
-#     heatmap = go.Heatmap(z=assembly_region,
-#                          hoverinfo='x+y+text',
-#                          text=assembly_hover,
-#                          opacity=0.5)
-#     data = [heatmap]
-#
-#     figure = dict(data=data, layout=layout)
-#
-#     return figure
-#
+
+# Fill Assembly
+@app.callback(
+    Output('assembly-graph', 'figure'),
+    [Input('cell-dropdown', 'value'),
+     Input('assembly-x-dimension', 'value'),
+     Input('assembly-y-dimension', 'value'),
+     Input('assembly-x-number', 'value'),
+     Input('assembly-y-number', 'value'),
+     Input('geometry-stores', 'data')]
+)
+def fill_assembly(selected_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, data):
+    planes = data[selected_cell]['radii']
+    planes = planes[::-1]
+
+    pitch_x = assembly_dim_x / assembly_num_x
+    pitch_y = assembly_dim_y / assembly_num_y
+
+    # TODO, if dimensions and quanitities are insensible, limit and explain to user
+    # if planes[0]*assembly_num_x > assembly_dim_x \
+    #     or planes[0]*assembly_num_y > assembly_dim_y:
+    #         assembly_dim_x = planes[0]*assembly_num_x
+    #         assembly_dim_y = planes[0]*assembly_num_y
+
+    colors = data[selected_cell]['colors']
+    assembly_region = np.ones((assembly_num_y, assembly_num_x))
+    colorscale = [[0, 'rgb(255, 255, 255)'], [1, colors[-1]]]
+    colors = colors[::-1][1:]
+
+    # Display universe name and location
+    assembly_hover = []
+    for a in range(assembly_dim_y):
+        row = []
+        for b in range(assembly_dim_x):
+            row.append('Universe')
+        assembly_hover.append(row)
+
+    # Invert Matrices
+    assembly_hover = assembly_hover[::-1]
+
+    shapes = []
+    print(colors)
+    for p in range(len(planes)):
+        color = colors[p]
+        for a in range(assembly_num_y):
+            for b in range(assembly_num_x):
+                shape = {
+                    'type': 'circle',
+                    'x0': b - planes[p] / pitch_x / 2,
+                    'y0': a - planes[p] / pitch_y / 2,
+                    'x1': b - planes[p] / pitch_x / 2 + planes[p] / pitch_x,
+                    'y1': a - planes[p] / pitch_y / 2 + planes[p] / pitch_y,
+                    'fillcolor': color,
+                    'opacity': .7
+                }
+
+                shapes.append(shape)
+
+    layout = dict(
+        title='Assembly Depiction',
+        height=1000,
+        width=1000,
+
+        xaxis=dict(
+            range=[-(planes[0] / 2 + (pitch_x - planes[0]) / 2), assembly_num_x],  # pitch_x*assembly_num_x
+            showgrid=False,
+            zeroline=False,
+            # fixedrange=True
+        ),
+        yaxis=dict(
+            range=[-(planes[0] / 2 + (pitch_y - planes[0]) / 2), assembly_num_y],
+            showgrid=False,
+            zeroline=False,
+            # fixedrange=True
+        ),
+        shapes=shapes,
+    )
+
+    heatmap = go.Heatmap(z=assembly_region,
+                         hoverinfo='x+y+text',
+                         text=assembly_hover,
+                         colorscale=colorscale,
+                         showscale=False,
+                         opacity=0.5)
+    data = [heatmap]
+
+    figure = dict(data=data, layout=layout)
+
+    return figure
+
+
 # ###################################
 #
 #
