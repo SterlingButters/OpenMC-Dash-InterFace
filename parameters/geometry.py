@@ -2,14 +2,17 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, State, Input
+import dash_daq as daq
+import json
+from dash.exceptions import PreventUpdate
 
 import plotly.graph_objs as go
 
 import numpy as np
 import re
 
-
-app = dash.Dash()
+external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
+app = dash.Dash(external_stylesheets=external_stylesheets)
 app.config['suppress_callback_exceptions'] = True
 
 #######################################################################################################################
@@ -18,271 +21,234 @@ app.layout = html.Div([
     ################################################################################
     # Title
     html.H2('Geometry Configuration',
-                style={
-                    'position': 'relative',
-                    'top': '0px',
-                    'left': '10px',
-                    'font-family': 'Dosis',
-                    'display': 'inline',
-                    'font-size': '4.0rem',
-                    'color': '#4D637F'
-                }),
+            style={
+                'position': 'relative',
+                'top': '0px',
+                'left': '10px',
+                'font-family': 'Dosis',
+                'display': 'inline',
+                'font-size': '4.0rem',
+                'color': '#4D637F'
+            }),
 
     ################################################################################
     html.Br(),
 
-    # Periodic Table for Material Selection
+    # dcc.Store(id='geometry-stores', storage_type='session'),
+    html.P("""
+        Second, we need to create our geometries. As an overview, since this interface currently
+        only supports geometry settings for a standard PWR/BWR i.e. radial planes for fuel 
+        rods and rectangular lattice configurations, we will begin by defining pin cells in which our
+        fuel & absorbers rods, water holes, etc will reside. Once pin cell regions are defined, you will
+        be able to create a rectangular lattice from a selected pin cell and then make individual selections
+        to replace those cell regions for which you would prefer a different configuration.  
+           """),
     html.Div([
+        html.Div([
+            html.H6("List of Planes"),
+            dcc.Input(id='planes-list', value='.45, .4',
+                      placeholder='Enter list of radial planes (comma separated)',
+                      type="text", style=dict(height=36)),
+        ],
+            style=dict(
+                display='table-cell',
+                verticalAlign="top",
+                width='10%'
+            ),
+        ),
 
-        html.A(id='chosen-element'),
-        html.Div(id='composition-option-container'),
-        html.A(id='isotope-message-update'),
+        html.Div([
+            html.H6("List of Materials"),
+            dcc.Dropdown(id='material-dropdown', multi=True,
+                         options=[{'label': 'Material1', 'value': 'Material1'},
+                                  {'label': 'Material2', 'value': 'Material2'},
+                                  {'label': 'Material3', 'value': 'Material3'}]),
+            dcc.Graph(id='cell-graph'),
+        ],
+            style=dict(
+                width='70%',
+                display='table-cell',
+                verticalAlign="top",
+            ),
+        ),
 
-        html.Button('Create Cell', id='cell-geometry-button', n_clicks=0),
-        html.Div(id='cell-geometry-config-container'),
+        html.Div([
+            html.H6("List of Colors"),
+            dcc.Dropdown(id='colors-dropdown', multi=True),
+            daq.ColorPicker(
+                id='color-picker',
+                label="Material Color",
+                value={'hex': '#ff0000', 'rgb': {'r': 255, 'g': 0, 'b': 0, 'a': 1}}
+            ),
+            dcc.Input(id='color-name', placeholder='Color Name', type="text", size=26),
+            html.Button('Add color to Dropdown', id='add-color-button', n_clicks=0),
+        ],
+            style=dict(
+                width='20%',
+                display='table-cell',
+                verticalAlign="top",
+            ),
+        ),
+    ], style=dict(
+        width='100%',
+        display='table',
+        ),
+    ),
 
-        html.Div(id='assembly-geometry-config-container'),
+    html.Button('Commit Configuration to Memory', id='store-cell-button'),
+    html.Br(),
 
-        html.Button('Set Geometrical Boundaries', id='whole-geometry-button', n_clicks=0),
-        html.Div(id='whole-geometry-config-container'),
-    ]),
+    dcc.Graph(id='assembly-graph'),
+    dcc.Dropdown(id='full-assembly-dropdown'),
+    dcc.Input(id='assembly-x-dimension', placeholder='Enter assembly x-width dimension',
+              type='number', value=25),
+    dcc.Input(id='assembly-y-dimension', placeholder='Enter assembly y-width dimension',
+              type='number', value=25),
+    dcc.Input(id='assembly-x-number', placeholder='Enter fuel pins in x-dimension',
+              type='number', value=17),
+    dcc.Input(id='assembly-y-number', placeholder='Enter fuel pins in y-dimension',
+              type='number', value=17),
 
+    html.Button('Set Geometrical Boundaries', id='whole-geometry-button', n_clicks=0),
+    html.Div(id='whole-geometry-config-container'),
 ])
+
 
 #######################################################################################################################
 # Geometry Interface
 
-
-# Initiate cell geometry config with button
 @app.callback(
-    Output('cell-geometry-config-container', 'children'),
-    [Input('cell-geometry-button', 'n_clicks')],)
-def invoke_cell_geometry_options(n_clicks):
-    # TODO: Below works but must find way to implement fill_region function on arbitrary number of graphs
-    geometry_ui_list = []
-    if n_clicks < 5:
-        for i in range(n_clicks):
-            geometry_ui_list.extend([dcc.Graph(id='cell-graph-{}'.format(i+1)),
-                                    dcc.Input(id='planes-list-{}'.format(i+1), value='.45, .4', placeholder='Enter list of radial planes (comma separated)',
-                                              type="text"),
-                                    html.Button('Fill Region', id='fill-region-button-{}'.format(i+1), n_clicks=0),
-                                    html.A(id='click-register-{}'.format(i+1)),
-                                    html.Br(),
-                                    ])
+    Output('colors-dropdown', 'options'),
+    [Input('add-color-button', 'n_clicks')],
+    [State('color-picker', 'value'),
+     State('color-name', 'value'),
+     State('colors-dropdown', 'options')]
+)
+def add_color(click, color, name, options):
+    color = 'rgb({}, {}, {})'.format(color['rgb']['r'], color['rgb']['g'], color['rgb']['b'])
+    if click > 0 and name is not None:
+        if options is None:
+            options = [{'label': name, 'value': color}]
+        else:
+            options.append({'label': name, 'value': color})
 
-    if n_clicks == 5:
-        n_clicks = 4
-
-    if n_clicks > 0:
-        geometry_ui_list.extend([html.Button('Create Assembly', id='assembly-geometry-button')])
-
-    options = html.Div(geometry_ui_list)
-    return options
+        return options
 
 
-# #######################################################################################################################
-# @app.callback(
-#     Output('click-register-1', 'children'),
-#     [Input('cell-graph-1', 'clickData')])
-# def click_register_function_1(clickData):
-#     region = 0
-#     click_x = 0
-#     click_y = 0
-#     if clickData is not None:
-#         if 'points' in clickData:
-#             point = clickData['points'][0]
-#             if 'text' in point:
-#                 region = int(re.search(r'\d+', point['text']).group())
-#             if 'x' in point:
-#                 click_x = point['x']
-#             if 'y' in point:
-#                 click_y = point['y']
-#         return [region, click_x, click_y]
-#
-#
-# # Fill Region
-# @app.callback(
-#     Output('cell-graph-1', 'figure'),
-#     [Input('planes-list-1', 'value'),
-#      Input('fill-region-button-1', 'n_clicks')],
-#     [State('material-dropdown', 'value'),
-#      State('cell-graph-1', 'clickData')]
-# )
-# def fill_region_1(planes, n_clicks, selected_material, clickData):
-#
-#     if selected_material == None:
-#         print("Please select material from dropdown")
-#
-#     planes = [float(plane) for plane in planes.split(',')]
-#     planes.sort()
-#
-#     edge = planes[-1]
-#     x = np.linspace(-edge, edge, 250)
-#     y = np.linspace(-edge, edge, 250)
-#
-#     regions = []
-#     cell_hover = []
-#     # Normal Display
-#     for i in x:
-#         row = []
-#         text_row = []
-#         for j in y:
-#
-#             if np.sqrt(i ** 2 + j ** 2) < planes[0]:
-#                 row.append(100)      # <- Arbitrary number to adjust color
-#                 text_row.append('Region 1')
-#
-#             if np.sqrt(i ** 2 + j ** 2) > planes[-1]:
-#                 row.append(75)      # <- Arbitrary number to adjust color
-#                 text_row.append('Region {}'.format(len(planes) + 1))
-#
-#             for k in range(len(planes) - 1):
-#                 if planes[k] < np.sqrt(i ** 2 + j ** 2) < planes[k + 1]:
-#                     row.append(k*3)  # <- Arbitrary number to adjust color
-#                     text_row.append('Region {}'.format(k + 2))
-#         regions.append(row)
-#         cell_hover.append(text_row)
-#
-#     ######################################################
-#     # Fill region in OpenMC
-#     outer_radii = []
-#     for plane in planes:
-#         outer_radii.append(openmc.ZCylinder(x0=0, y0=0, R=plane, name='{} Outer Radius'))
-#
-#     print(outer_radii)
-#
-#     # Initialize region
-#     click_x = 0
-#     click_y = 0
-#     if clickData is not None:
-#         if 'points' in clickData:
-#             point = clickData['points'][0]
-#             if 'x' in point:
-#                 click_x = point['x']
-#             if 'y' in point:
-#                 click_y = point['y']
-#
-#         new_hover = []
-#
-#         if n_clicks > 0:
-#
-#             # Change graph on Click # TODO: Figure out why new text wont show up
-#             if 0 < np.sqrt(click_x ** 2 + click_y ** 2) < planes[0]:
-#                 cell_filling = openmc.Cell(name='{}'.format(MATERIALS[selected_material]),
-#                                            fill=MODEL.materials[selected_material],
-#                                            region=-outer_radii[0])
-#                 CELL_FILLINGS.append(cell_filling)
-#                 store_object('cell-fillings', CELL_FILLINGS)
-#
-#                 for row_ in cell_hover:
-#                     for text in row_:
-#                         new_hover.append(text.replace('Region 1', '{} Region'.format(MATERIALS[selected_material])))
-#
-#             if np.sqrt(click_x ** 2 + click_y ** 2) > planes[-1]:
-#                 cell_filling = openmc.Cell(name='{}'.format(MATERIALS[selected_material]),
-#                                            fill=MODEL.materials[selected_material],
-#                                            region=+outer_radii[-1])
-#                 CELL_FILLINGS.append(cell_filling)
-#                 store_object('cell-fillings', CELL_FILLINGS)
-#
-#                 for row_ in cell_hover:
-#                     for text in row_:
-#                         new_hover.append(text.replace('Region {}'.format(len(planes) + 1),
-#                                                       '{} Region'.format(MATERIALS[selected_material])))
-#
-#             for k in range(len(planes) - 1):
-#                 if planes[k] < np.sqrt(click_x ** 2 + click_y ** 2) < planes[k + 1]:
-#                     cell_filling = openmc.Cell(name='{}'.format(MATERIALS[selected_material]),
-#                                                fill=MODEL.materials[selected_material],
-#                                                region=+outer_radii[k] & -outer_radii[k + 1])
-#                     CELL_FILLINGS.append(cell_filling)
-#                     store_object('cell-fillings', CELL_FILLINGS)
-#
-#                     for row_ in cell_hover:
-#                         for text in row_:
-#                             new_hover.append(text.replace('Region {}'.format(k + 2),
-#                                                           '{} Region'.format(MATERIALS[selected_material])))
-#
-#             n_clicks = 0
-#
-#         cell_hover = new_hover
-#
-#     CELL_FILLINGS = restore_object('cell-fillings')
-#     print(CELL_FILLINGS)
-#
-#     cell_universe = openmc.Universe(name='{} Cell'.format(MATERIALS[selected_material]))
-#     cell_universe.add_cells(CELL_FILLINGS)
-#     print(cell_universe)
-#
-#     # # Add completely filled cell universe to list of universes
-#     if len(CELL_FILLINGS) == len(planes)+1:
-#         CELL_UNIVERSES = restore_object('cell-universes')
-#         CELL_UNIVERSES.append(cell_universe)
-#         store_object('cell-universes', CELL_UNIVERSES)
-#
-#     ######################################################
-#
-#     heatmap = go.Heatmap(z=regions,
-#                          x=x,
-#                          y=y,
-#                          hoverinfo='x+y+text',
-#                          text=cell_hover,
-#                          opacity=0.5,
-#                          showscale=False)
-#
-#     data = [heatmap]
-#     shapes = []
-#
-#     for plane in planes:
-#         shape = {
-#             'type': 'circle',
-#             'x0': -plane,
-#             'y0': -plane,
-#             'x1': plane,
-#             'y1': plane,
-#             'line': {
-#                 'width': 4,
-#             },
-#             'opacity': 1
-#         }
-#
-#         shapes.append(shape)
-#
-#     layout = dict(title='Cell Region Depiction',
-#                   height=1000,
-#                   width=1000,
-#                   shapes=shapes)
-#
-#     figure = dict(data=data, layout=layout)
-#
-#     return figure
-#
-#
-# #######################################################################################################################
-#
-# # Invoke assembly geometry options
-# @app.callback(
-#     Output('assembly-geometry-config-container', 'children'),
-#     [Input('assembly-geometry-button', 'n_clicks')],)
-# def invoke_assembly_geometry_options(n_clicks):
-#     if n_clicks > 0:
-#         options = html.Div([
-#             html.Br(),
-#             dcc.Graph(id='assembly-graph'),
-#             dcc.Dropdown(id='full-assembly-dropdown',),
-#             dcc.Input(id='assembly-x-dimension', placeholder='Enter assembly x-width dimension',
-#                       type='number', value=25),
-#             dcc.Input(id='assembly-y-dimension', placeholder='Enter assembly y-width dimension',
-#                       type='number', value=25),
-#             dcc.Input(id='assembly-x-number', placeholder='Enter fuel pins in x-dimension',
-#                       type='number', value=17),
-#             dcc.Input(id='assembly-y-number', placeholder='Enter fuel pins in y-dimension',
-#                       type='number', value=17),
-#             html.Br(),
-#           ])
-#         return options
-#
-#
+# Graph Selections
+@app.callback(
+    Output('cell-graph', 'figure'),
+    [Input('planes-list', 'value'),
+     Input('material-dropdown', 'value'),
+     Input('colors-dropdown', 'value')],
+)
+def create_cell(planes, materials, colors):
+    planes = [float(plane) for plane in planes.split(',')]
+    planes.sort()
+
+    edge = planes[-1] + 0.1 * planes[-1]
+    x = np.linspace(-edge, edge, 250)
+    y = np.linspace(-edge, edge, 250)
+
+    colorscale = [[0, 'rgb(255, 255, 255)']]
+    if colors is not None and len(colors) >= 1:
+        values = np.linspace(0, 1, len(colors) + 1)[1:]
+        print(values)
+        print(len(values), len(colors), len(planes))
+
+        for value in range(len(colors)):
+            colorscale.append([values[value], colors[value]])
+
+    regions = []
+    cell_hover = []
+    for i in x:
+        row = []
+        text_row = []
+        for j in y:
+
+            if np.sqrt(i ** 2 + j ** 2) < planes[0]:
+                # For HoverText
+                if materials is None:
+                    text_row.append('Region 1')
+                else:
+                    text_row.append(materials[0])
+
+                # For Color
+                if colors is not None:
+                    row.append(values[0])
+                else:
+                    row.append(0)
+
+            if np.sqrt(i ** 2 + j ** 2) > planes[-1]:
+                # For HoverText
+                if materials is not None and len(materials) > len(planes):
+                    text_row.append(materials[-1])
+                else:
+                    text_row.append('Region {}'.format(len(planes) + 1))
+
+                # For Colors
+                if colors is not None and len(colors) > len(planes):
+                    row.append(values[-1])
+                else:
+                    row.append(0)
+
+            for k in range(len(planes) - 1):
+                # For HoverText
+                if planes[k] < np.sqrt(i ** 2 + j ** 2) < planes[k + 1]:
+                    if materials is not None and len(materials) > 1:
+                        text_row.append(materials[k + 1])
+                    else:
+                        text_row.append('Region {}'.format(k + 2))
+
+                # For Colors
+                if planes[k] < np.sqrt(i ** 2 + j ** 2) < planes[k + 1]:
+                    if colors is not None and len(colors) > 1:
+                        row.append(values[k+1])
+                    else:
+                        row.append(0)
+
+        regions.append(row)
+        cell_hover.append(text_row)
+
+    heatmap = go.Heatmap(z=regions,
+                         x=x,
+                         y=y,
+                         hoverinfo='x+y+text',
+                         text=cell_hover,
+                         colorscale=colorscale,
+                         opacity=0.5,
+                         showscale=False)
+
+    shapes = []
+    for plane in planes:
+        shape = {
+            'type': 'circle',
+            'x0': -plane,
+            'y0': -plane,
+            'x1': plane,
+            'y1': plane,
+            'line': {
+                'width': 4,
+            },
+            'opacity': 1
+        }
+
+        shapes.append(shape)
+
+    layout = dict(title='Cell Region Depiction',
+                  xaxis=dict(fixedrange=True),
+                  yaxis=dict(fixedrange=True),
+                  height=750,
+                  width=750,
+                  shapes=shapes)
+
+    figure = dict(data=[heatmap], layout=layout)
+
+    return figure
+
+
+#######################################################################################################################
+
 # # Fill Assembly
 # @app.callback(
 #     Output('assembly-graph', 'figure'),
