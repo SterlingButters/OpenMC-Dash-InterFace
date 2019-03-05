@@ -185,15 +185,18 @@ def create_cell(planes, materials, colors):
                     row.append(0)
 
             if np.sqrt(i ** 2 + j ** 2) > planes[-1]:
-                # For HoverText
-                if materials is not None and len(materials) > len(planes):
-                    text_row.append(materials[-1])
-                else:
-                    text_row.append('Region {}'.format(len(planes) + 1))
+                if -visible_edge < i < visible_edge and -visible_edge < j < visible_edge:
+                    # For HoverText
+                    if materials is not None and len(materials) > len(planes):
+                        text_row.append(materials[-1])
+                    else:
+                        text_row.append('Region {}'.format(len(planes) + 1))
 
-                # For Colors
-                if colors is not None and len(colors) > len(planes):
-                    row.append(values[-1])
+                    # For Colors
+                    if colors is not None and len(colors) > len(planes):
+                        row.append(values[-1])
+                    else:
+                        row.append(0)
                 else:
                     row.append(0)
 

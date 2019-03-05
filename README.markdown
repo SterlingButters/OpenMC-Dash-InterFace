@@ -23,7 +23,7 @@ potential solutions to certain issues. Standby for results though it may be awhi
 I've been wanting to do a project using Dash now for some time. I've decided to attempt to replicate (more or less) 
 ERSN for OpenMC (Open Source Monte Carlo Neutron Transport Code) but using Dash. This project will create a GUI for 
 setting up OpenMC simulations, running them, and depicting the results. Dash is pythonic way of coding HTML and Js with 
-callbacks. Clone the project and run `main.py` in the main directory.
+callbacks. Clone the project and run `main.py` in the project directory.
 
 ### Desired 1st release features
 ##### Materials:
