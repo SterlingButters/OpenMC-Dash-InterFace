@@ -337,6 +337,7 @@ def tabulate_materials(timestamp, data):
 
     print(json.dumps(data, indent=2))
     df = pd.DataFrame.from_dict(data)
+    # https://plot.ly/python/figure-factory/table/
     table = ff.create_table(df)
     return table
 

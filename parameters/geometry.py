@@ -146,18 +146,22 @@ def create_cell(planes, materials, colors):
     planes = [float(plane) for plane in planes.split(',')]
     planes.sort()
 
-    edge = planes[-1] + 0.1 * planes[-1]
+    edge = planes[-1] + 0.25 * planes[-1]
+    visible_edge = planes[-1] + 0.1 * planes[-1]
     x = np.linspace(-edge, edge, 250)
     y = np.linspace(-edge, edge, 250)
 
     colorscale = [[0, 'rgb(255, 255, 255)']]
+
     if colors is not None and len(colors) >= 1:
         values = np.linspace(0, 1, len(colors) + 1)[1:]
-        print(values)
-        print(len(values), len(colors), len(planes))
 
         for value in range(len(colors)):
             colorscale.append([values[value], colors[value]])
+
+    # TODO: NEED A BASELINE COLOR i.e. somewhere in the heatmap there must be z=0 or white -> try to do this
+    #       outside of view
+    print(colorscale)
 
     regions = []
     cell_hover = []
@@ -176,6 +180,7 @@ def create_cell(planes, materials, colors):
                 # For Color
                 if colors is not None:
                     row.append(values[0])
+                    print(values[0])
                 else:
                     row.append(0)
 
@@ -236,8 +241,10 @@ def create_cell(planes, materials, colors):
         shapes.append(shape)
 
     layout = dict(title='Cell Region Depiction',
-                  xaxis=dict(fixedrange=True),
-                  yaxis=dict(fixedrange=True),
+                  xaxis=dict(fixedrange=True,
+                             range=[-visible_edge, visible_edge]),
+                  yaxis=dict(fixedrange=True,
+                             range=[-visible_edge, visible_edge]),
                   height=750,
                   width=750,
                   shapes=shapes)
