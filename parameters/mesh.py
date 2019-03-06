@@ -20,7 +20,6 @@ app.layout = html.Div([
                 'color': '#4D637F'
             }),
 
-    ################################################################################
     html.Br(),
 
     # Periodic Table for Material Selection

@@ -36,27 +36,7 @@ app.layout = html.Div([
         html.Div(id='scores-config-container'),
     ]),
 ])
-#######################################################################################################################
-# Initialize model & redisworks for memory sharing between callbacks
-r = redis.StrictRedis(host='localhost', port=6379, db=0)
-r.flushall()
-
-
-def store_object(key, obj):
-    var = pickle.dumps(obj)
-    r.set(key, var)
-
-
-def restore_object(key):
-    obj = pickle.loads(r.get(key))
-    return obj
-
-
-store_object('model', openmc.model.Model())
-
 ############################################################################################################
-# Tallies Interface
-restore_object('model').tallies = openmc.Tallies()
 
 
 @app.callback(

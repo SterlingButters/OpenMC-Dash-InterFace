@@ -33,6 +33,8 @@ app.layout = html.Div([
     dcc.Store(id='color-stores', storage_type='session'),
     dcc.Store(id='cell-stores', storage_type='session'),
     dcc.Store(id='selected-stores', storage_type='session'),
+    dcc.Store(id='some-stores', storage_type='session'),
+    # dcc.Store(id='assembly-stores', storage_type='session'),
 
     html.P("""
         Second, we need to create our geometries. As an overview, since this interface currently
@@ -113,17 +115,64 @@ app.layout = html.Div([
         their specifications if needed e.g. control rods, water holes, etc.
            """),
     html.H6('Cell Selection'),
-    dcc.Dropdown(id='cell-dropdown'),
-    dcc.Input(id='assembly-x-dimension', placeholder='Enter assembly x-width dimension',
-              type='number', value=15),
-    dcc.Input(id='assembly-y-dimension', placeholder='Enter assembly y-width dimension',
-              type='number', value=15),
-    dcc.Input(id='assembly-x-number', placeholder='Enter fuel pins in x-dimension',
-              type='number', value=15),
-    dcc.Input(id='assembly-y-number', placeholder='Enter fuel pins in y-dimension',
-              type='number', value=15),
-    html.Div(id='assembly-container'),
-    html.Div(id='test'),
+    html.Div([
+        html.Div([
+            html.Div(style=dict(height=40)),
+            html.P("""
+                The dropdown below will fill the entire assembly with cells of that type.
+                   """),
+            dcc.Dropdown(id='cell-dropdown'),
+            html.P("X-width Dimension [units]"),
+            dcc.Input(id='assembly-x-dimension', placeholder='Enter assembly x-width dimension',
+                      type='number', value=15),
+            html.P("Y-width Dimension [units]"),
+            dcc.Input(id='assembly-y-dimension', placeholder='Enter assembly y-width dimension',
+                      type='number', value=15),
+            html.P("X-pins [#]"),
+            dcc.Input(id='assembly-x-number', placeholder='Enter fuel pins in x-dimension',
+                      type='number', value=15),
+            html.P("Y-pins [#]"),
+            dcc.Input(id='assembly-y-number', placeholder='Enter fuel pins in y-dimension',
+                      type='number', value=15),
+            html.P("""
+                The dropdown below is used to specify the cell type that is to be used to replace
+                only the selected cells.
+            """),
+            dcc.Dropdown(id='cell-for-selection'),
+            html.P("Selected Cells: "), html.Div(id='test'),
+            # TODO: Link to Callback
+            html.Div(id='cell-preview'),
+            html.Button('Submit cell into selection(s)', id='submit-selected-btn')
+        ],
+            style=dict(
+                width='35%',
+                display='table-cell',
+                verticalAlign="top",
+            ),
+        ),
+        html.Div(style=dict(
+            width='10%',
+            display='table-cell',
+            verticalAlign="top",
+        ),
+        ),
+        html.Div([
+            html.Div(id='assembly-container'),
+        ],
+            style=dict(
+                width='55%',
+                display='table-cell',
+                verticalAlign="top",
+            ),
+        )
+    ], style=dict(
+        width='100%',
+        display='table',
+    ),
+    ),
+    # TODO: Link to CallBack
+    dcc.Input(id='assembly-name'),
+    html.Button('Store Assembly', id='store-assembly-btn', n_clicks=0),
     html.Div(style=dict(height=30)),
 
     ################################################################################
@@ -372,7 +421,7 @@ def create_cell(planes, materials, colors):
                          hoverinfo='x+y+text',
                          text=cell_hover,
                          colorscale=colorscale,
-                         opacity=0.5,
+                         opacity=0.6,
                          showscale=False)
 
     shapes = []
@@ -450,13 +499,12 @@ def store_cell(clicks, name, planes, materials, colors, data):
 #         return True
 
 
-#
 @app.callback(
     Output('cell-dropdown', 'options'),
     [Input('cell-stores', 'modified_timestamp')],
     [State('cell-stores', 'data')]
 )
-def store_cell(timestamp, data):
+def populate_dropdown(timestamp, data):
     if timestamp is None:
         raise PreventUpdate
 
@@ -464,10 +512,26 @@ def store_cell(timestamp, data):
         labels = data.keys()
         options = [{'label': label, 'value': label} for label in labels]
 
-        print(data)
-
         return options
 
+
+@app.callback(
+    Output('cell-for-selection', 'options'),
+    [Input('cell-stores', 'modified_timestamp'),
+     Input('cell-dropdown', 'value')],
+     [State('cell-stores', 'data')]
+)
+def populate_dropdown(timestamp, main_cell, data):
+    if timestamp is None:
+        raise PreventUpdate
+
+    if data:
+        labels = data.keys()
+        options = [{'label': label, 'value': label} for label in labels]
+        if {'label': main_cell, 'value': main_cell} in options:
+            options.remove({'label': main_cell, 'value': main_cell})
+
+        return options
 
 #######################################################################################################################
 # Assemblies
@@ -498,13 +562,25 @@ def print_selected_cells(clickData, data):
     [Input('selected-stores', 'modified_timestamp')],
     [State('selected-stores', 'data')]
 )
-def test(timestamp, data):
+def show_selection_locations(timestamp, data):
     if timestamp is None:
         raise PreventUpdate
 
     if data:
-        print(data)
         return html.P('{}'.format(str(data['selected-cells'])))
+
+
+@app.callback(
+    Output('some-stores', 'data'),
+    [Input('submit-selected-btn', 'n_clicks')],
+    [State('cell-for-selection', 'value'),
+     State('selected-stores', 'data'),
+     State('some-stores', 'data')]
+)
+def configure_stores(clicks, selected_cell, selection_locs, data):
+    if clicks and selected_cell:
+        test = {'selection-indices': selection_locs['selected-cells'], 'associated-cell': selected_cell}
+        return test
 
 
 @app.callback(
@@ -514,13 +590,11 @@ def test(timestamp, data):
      Input('assembly-y-dimension', 'value'),
      Input('assembly-x-number', 'value'),
      Input('assembly-y-number', 'value'),
-     Input('cell-stores', 'data')]
+     Input('cell-stores', 'data'),
+     Input('some-stores', 'data')],
 )
-def fill_assembly(selected_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, data):
-    if data and selected_cell:
-        planes = data[selected_cell]['radii']
-        planes = planes[::-1]
-
+def fill_assembly(main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, data, some_data):
+    if data and main_cell:
         pitch_x = assembly_dim_x / assembly_num_x
         pitch_y = assembly_dim_y / assembly_num_y
 
@@ -529,40 +603,63 @@ def fill_assembly(selected_cell, assembly_dim_x, assembly_dim_y, assembly_num_x,
         #                   "if your specifications are causing pins to overlap!")
 
         # else:
-        colors = data[selected_cell]['colors']
-        assembly_region = np.ones((assembly_num_y, assembly_num_x))
-        colorscale = [[0, 'rgb(255, 255, 255)'], [1, colors[-1]]]
-        colors = colors[::-1][1:]
 
-        # Display universe name and location
+        shapes = []
         assembly_hover = []
-        for a in range(assembly_dim_y):
+        for a in range(assembly_num_y):
             row = []
-            for b in range(assembly_dim_x):
-                row.append('Universe')
+            for b in range(assembly_num_x):
+                row.append('{}'.format(main_cell))
+
+                if some_data and [b, a] in some_data['selection-indices']:
+                    planes = data[some_data['associated-cell']]['radii']
+                    planes = planes[::-1]
+
+                    colors = data[some_data['associated-cell']]['colors']
+                    colors = colors[::-1][1:]
+
+                    for p in range(len(planes)):
+                        color = colors[p]
+                        shape = {
+                            'type': 'circle',
+                            'x0': b - planes[p] / pitch_x / 2,
+                            'y0': a - planes[p] / pitch_y / 2,
+                            'x1': b - planes[p] / pitch_x / 2 + planes[p] / pitch_x,
+                            'y1': a - planes[p] / pitch_y / 2 + planes[p] / pitch_y,
+                            'fillcolor': color,
+                            'line': dict(width=.1),
+                            'opacity': 1
+                        }
+                        shapes.append(shape)
+                else:
+                    planes = data[main_cell]['radii']
+                    planes = planes[::-1]
+
+                    colors = data[main_cell]['colors']
+                    colors = colors[::-1][1:]
+
+                    # if a = ?, b = ?: planes = selected_cell['planes']; colors = selected_cell['colors']
+                    for p in range(len(planes)):
+                        color = colors[p]
+                        shape = {
+                            'type': 'circle',
+                            'x0': b - planes[p] / pitch_x / 2,
+                            'y0': a - planes[p] / pitch_y / 2,
+                            'x1': b - planes[p] / pitch_x / 2 + planes[p] / pitch_x,
+                            'y1': a - planes[p] / pitch_y / 2 + planes[p] / pitch_y,
+                            'fillcolor': color,
+                            'line': dict(width=.1),
+                            'opacity': 1
+                        }
+                        shapes.append(shape)
+
             assembly_hover.append(row)
 
         # Invert Matrices
         assembly_hover = assembly_hover[::-1]
-
-        shapes = []
-        print(colors)
-        for p in range(len(planes)):
-            color = colors[p]
-            for a in range(assembly_num_y):
-                for b in range(assembly_num_x):
-                    shape = {
-                        'type': 'circle',
-                        'x0': b - planes[p] / pitch_x / 2,
-                        'y0': a - planes[p] / pitch_y / 2,
-                        'x1': b - planes[p] / pitch_x / 2 + planes[p] / pitch_x,
-                        'y1': a - planes[p] / pitch_y / 2 + planes[p] / pitch_y,
-                        'fillcolor': color,
-                        'line': dict(width=.1),
-                        'opacity': .7
-                    }
-
-                    shapes.append(shape)
+        assembly_region = np.ones((assembly_num_y, assembly_num_x))
+        colorscale = [[0, 'rgb(255, 255, 255)'], [1, data[main_cell]['colors'][-1]]]
+        radius = data[main_cell]['radii'][::-1][0]
 
         layout = dict(
             title='Assembly Depiction',
@@ -570,14 +667,12 @@ def fill_assembly(selected_cell, assembly_dim_x, assembly_dim_y, assembly_num_x,
             width=750,
 
             xaxis=dict(
-                range=[-(planes[0] / 2 + (pitch_x - planes[0]) / 2), assembly_num_x],  # pitch_x*assembly_num_x
-                showgrid=False,
+                range=[-(radius / 2 + (pitch_x - radius) / 2), assembly_num_x],
                 zeroline=False,
                 fixedrange=True
             ),
             yaxis=dict(
-                range=[-(planes[0] / 2 + (pitch_y - planes[0]) / 2), assembly_num_y],
-                showgrid=False,
+                range=[-(radius / 2 + (pitch_y - radius) / 2), assembly_num_y],
                 zeroline=False,
                 fixedrange=True
             ),
@@ -589,7 +684,7 @@ def fill_assembly(selected_cell, assembly_dim_x, assembly_dim_y, assembly_num_x,
                              text=assembly_hover,
                              colorscale=colorscale,
                              showscale=False,
-                             opacity=0.5)
+                             opacity=1)
         data = [heatmap]
 
         figure = dict(data=data, layout=layout)

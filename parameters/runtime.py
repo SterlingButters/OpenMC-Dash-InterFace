@@ -35,8 +35,36 @@ app.layout = html.Div([
                 'color': '#4D637F'
             }), html.Br(),
     html.Div([
-        html.Button('Configure Run Settings', id='config-settings-button', n_clicks=0),
-        html.Div(id='settings-config-container'),
+        html.Label('Total/Inactive Batches for Simulation'),
+        dcc.RangeSlider(
+            id='total-inactive-batches',
+            min=0,
+            max=100,
+            value=[5, 10],
+            marks={i: i for i in range(0, 100, 5)},
+            included=False,
+            pushable=5),
+
+        html.Br(),
+        html.Label('Number of Generations per Batch in Simulation'),
+        dcc.Slider(
+            id='generations-per-batch',
+            min=0,
+            max=100,
+            step=1,
+            value=10,
+            marks={i: i for i in range(0, 100, 5)}
+        ),
+        html.Br(),
+        html.Label('Number of Particles in Simulation'),
+        dcc.Slider(
+            id='particles-input',
+            min=0,
+            max=10000,
+            step=1,
+            value=500,
+            marks={i: i for i in range(0, 10000, 500)}
+        ),
         html.A(id='settings-message'),
         html.Br(),
     ]),
@@ -44,48 +72,6 @@ app.layout = html.Div([
 
 ############################################################################################################
 # Settings Interface
-
-
-@app.callback(
-    Output('settings-config-container', 'children'),
-    [Input('config-settings-button', 'n_clicks')], )
-def invoke_settings_options(n_clicks):
-    if n_clicks > 0:
-        options = html.Div([
-            html.Label('Total/Inactive Batches for Simulation'),
-            dcc.RangeSlider(
-                id='total-inactive-batches',
-                min=0,
-                max=100,
-                value=[5, 10],
-                marks={i: i for i in range(0, 100, 5)},
-                included=False,
-                pushable=5),
-
-            html.Br(),
-            html.Label('Number of Generations per Batch in Simulation'),
-            dcc.Slider(
-                id='generations-per-batch',
-                min=0,
-                max=100,
-                step=1,
-                value=10,
-                marks={i: i for i in range(0, 100, 5)}
-            ),
-            html.Br(),
-            html.Label('Number of Particles in Simulation'),
-            dcc.Slider(
-                id='particles-input',
-                min=0,
-                max=10000,
-                step=1,
-                value=500,
-                marks={i: i for i in range(0, 10000, 500)}
-            ),
-        ])
-
-        return options
-
 
 # restore_object('model').settings.confidence_intervals = False
 # restore_object('model').settings.cutoff =
