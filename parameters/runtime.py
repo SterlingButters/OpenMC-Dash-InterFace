@@ -10,9 +10,12 @@ import openmc.model
 import openmc.mgxs
 
 import numpy as np
+import time
+import io
 import re
-import pickle
-import redis
+from glob import glob
+import os
+from contextlib import redirect_stdout
 
 
 app = dash.Dash()
@@ -38,24 +41,6 @@ app.layout = html.Div([
         html.Br(),
     ]),
 ])
-#######################################################################################################################
-# Initialize model & redisworks for memory sharing between callbacks
-r = redis.StrictRedis(host='localhost', port=6379, db=0)
-r.flushall()
-
-
-def store_object(key, obj):
-    var = pickle.dumps(obj)
-    r.set(key, var)
-
-
-def restore_object(key):
-    obj = pickle.loads(r.get(key))
-    return obj
-
-
-store_object('model', openmc.model.Model())
-
 
 ############################################################################################################
 # Settings Interface
@@ -132,24 +117,14 @@ def invoke_settings_options(n_clicks):
 
 @app.callback(
     Output('settings-message', 'children'),
-    [Input('total-inactive-batches', 'value'),
-     Input('generations-per-batch', 'value'),
-     Input('particles-input', 'value'),
-     Input('boundary-range-x', 'value'),
-     Input('boundary-range-y', 'value'),
-     Input('boundary-range-z', 'value')]
+    [State('total-inactive-batches', 'value'),
+     State('generations-per-batch', 'value'),
+     State('particles-input', 'value')]
 )
-def apply_settings(total_batches, inactive_batches, generations_per_batch, particles, range_x, range_y, range_z):
+def define_settings(total_batches, generations_per_batch, particles):
     # Make sure this works
-    restore_object('model').settings.cross_sections = '/cross-sections/cross_sections.xml'
-    restore_object('model').settings.batches = total_batches
-    restore_object('model').settings.inactive = inactive_batches
-    restore_object('model').settings.generations_per_batch = generations_per_batch
-    restore_object('model').settings.particles = particles
-    restore_object('model').settings.source = openmc.Source(space=openmc.stats.Box(
-        [range_x[0], range_y[0], range_z[0]], [range_x[1], range_y[1], range_z[1]],
-        # TODO: See other options for only_fissionable
-        only_fissionable=True))
+    cross_sections = '/cross-sections/cross_sections.xml'
+
     return
 
 
@@ -161,9 +136,7 @@ def apply_settings(total_batches, inactive_batches, generations_per_batch, parti
 def run_model(run_click):
     if int(run_click) > 0:
 
-        restore_object('model').export_to_xml()
-
-        xml_files = glob('*.xml')
+        xml_files = glob('./xml-files/*.xml')
         print(xml_files)
 
         pass_test = False
@@ -199,7 +172,6 @@ def show_material_xml_contents(run_click):
     if run_click > 0:
         filename = 'materials.xml'
         contents = open(filename).read()
-        run_click = 0
         return contents
 
 
@@ -211,7 +183,6 @@ def show_material_xml_contents(run_click):
     if run_click > 0:
         filename = 'geometry.xml'
         contents = open(filename).read()
-        run_click = 0
         return contents
 
 
@@ -223,7 +194,6 @@ def show_material_xml_contents(run_click):
     if run_click > 0:
         filename = 'tallies.xml'
         contents = open(filename).read()
-        run_click = 0
         return contents
 
 
@@ -235,7 +205,6 @@ def show_material_xml_contents(run_click):
     if run_click > 0:
         filename = 'settings.xml'
         contents = open(filename).read()
-        run_click = 0
         return contents
 
 
@@ -247,7 +216,6 @@ def show_material_xml_contents(run_click):
     if run_click > 0:
         filename = 'plots.xml'
         contents = open(filename).read()
-        run_click = 0
         return contents
 
 
@@ -264,7 +232,6 @@ def write_material_xml_contents(write_click, contents):
         file = open(filename, "w+")
         file.write(contents)
         file.close()
-        write_click = 0
 
 
 @app.callback(
@@ -278,7 +245,6 @@ def write_material_xml_contents(write_click, contents):
         file = open(filename, "w+")
         file.write(contents)
         file.close()
-        write_click = 0
 
 
 @app.callback(
@@ -292,7 +258,6 @@ def write_material_xml_contents(write_click, contents):
         file = open(filename, "w+")
         file.write(contents)
         file.close()
-        write_click = 0
 
 
 @app.callback(
@@ -306,7 +271,6 @@ def write_material_xml_contents(write_click, contents):
         file = open(filename, "w+")
         file.write(contents)
         file.close()
-        write_click = 0
 
 
 @app.callback(
@@ -320,11 +284,9 @@ def write_material_xml_contents(write_click, contents):
         file = open(filename, "w+")
         file.write(contents)
         file.close()
-        write_click = 0
 
 
 #######################################################################################################################
-# TODO: Take label from checklist and pass to dropdown instead of value only
 @app.callback(
     Output(component_id='score-graph-dropdown', component_property='options'),
     [Input(component_id='scores-checklist', component_property='values')],
