@@ -578,41 +578,41 @@ def print_selected_cells(clickData, data):
      State('some-stores', 'data')]
 )
 def configure_stores(clicks, selected_cell, selection_locs, data):
-    data = data or {'cells': []}
-    cells = data['cells']
+    data = data or {}
 
     if clicks and selected_cell:
 
         # If there is no entry at all for selections of specified cell type
-        if selected_cell not in [cell['name'] for cell in cells]:
-            cells.append({'name': selected_cell, 'indices': selection_locs['selected-cells']})
+        if selected_cell not in data.keys():
+            data.update({'{}'.format(selected_cell): {'indices': selection_locs['selected-cells']}})
 
         # Else need to loop thru indices of existing cell types to check duplicated indices
-        else:
-            # Loop over all cells
+        data[selected_cell]['indices'] = selection_locs['selected-cells']
+
+        for k in range(len(data[selected_cell]['indices'])):
+            # If the indices are in any of the cells not selected
+            cells = list(data.keys())
             for i in range(len(cells)):
-                # Loop over indices of the cell
-                for j in range(len(cells[i]['indices'])):
-                    # If the cell is the same as the selected
-                    if cells[i]['name'] == selected_cell:
-                        # Set cell indices to what user can see
-                        cells[i]['indices'] = selection_locs['selected-cells']
-                    # Else the cell is not the selected one
-                    else:
-                        # Loop through the indices the user has specified
-                        for k in range(len(selection_locs)):
-                            # If the indices are in any of the cells not selected
-                            if selection_locs['selected-cells'][k] in cells[i]['indices']:
-                                # Remove those indices from that cell
-                                cells[i]['indices'].remove(selection_locs['selected-cells'][k])
+                if selected_cell != cells[i]:
+
+                    if data[selected_cell]['indices'][k] in data[cells[i]]['indices']:
+                        # Remove those indices from that cell
+                        data[cells[i]]['indices'].remove(data[selected_cell]['indices'][k])
+
+                    # # Loop through the indices the user has specified
+                    # for k in range(len(selection_locs)):
+                    #     # If the indices are in any of the cells not selected
+                    #     if selection_locs['selected-cells'][k] in cells[i]['indices']:
+                    #         # Remove those indices from that cell
+                    #         print("removing {} from {}".format(selection_locs['selected-cells'][k], cells[i]['name']))
+                    #         cells[i]['indices'].remove(selection_locs['selected-cells'][k])
         print(data)
-        return {'cells': cells}
+        return data
 
 
 @app.callback(
     Output('assembly-container', 'children'),
     [Input('cell-dropdown', 'value'),
-     Input('cell-for-selection', 'value'),
      Input('assembly-x-dimension', 'value'),
      Input('assembly-y-dimension', 'value'),
      Input('assembly-x-number', 'value'),
@@ -620,7 +620,7 @@ def configure_stores(clicks, selected_cell, selection_locs, data):
      Input('cell-stores', 'data'),
      Input('some-stores', 'data')],
 )
-def fill_assembly(main_cell, unique_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, data, some_data):
+def fill_assembly(main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, data, some_data):
     if data and main_cell:
         pitch_x = assembly_dim_x / assembly_num_x
         pitch_y = assembly_dim_y / assembly_num_y
@@ -638,33 +638,37 @@ def fill_assembly(main_cell, unique_cell, assembly_dim_x, assembly_dim_y, assemb
                 row.append('{}'.format(main_cell))
 
                 if some_data:
-                    for c in range(len(some_data['cells'])):
-                        if some_data['cells'][c]['name'] == unique_cell:
-                            if [b, a] in some_data['cells'][c]['indices']:
-                                planes = data[some_data['cells'][c]['name']]['radii']
+                    # If index is not specified in any of cell indices
+                    if [b, a] not in [result for name in some_data.keys() for result in some_data[name]['indices']]:
+
+                        planes = data[main_cell]['radii']
+                        planes = planes[::-1]
+
+                        colors = data[main_cell]['colors']
+                        colors = colors[::-1][1:]
+
+                        for p in range(len(planes)):
+                            color = colors[p]
+                            shape = {
+                                'type': 'circle',
+                                'x0': b - planes[p] / pitch_x / 2,
+                                'y0': a - planes[p] / pitch_y / 2,
+                                'x1': b - planes[p] / pitch_x / 2 + planes[p] / pitch_x,
+                                'y1': a - planes[p] / pitch_y / 2 + planes[p] / pitch_y,
+                                'fillcolor': color,
+                                'line': dict(width=.1),
+                                'opacity': 1
+                            }
+                            shapes.append(shape)
+
+                    # Index is
+                    else:
+                        for name in some_data.keys():
+                            if [b, a] in some_data[name]['indices']:
+                                planes = data[name]['radii']
                                 planes = planes[::-1]
 
-                                colors = data[some_data['cells'][c]['name']]['colors']
-                                colors = colors[::-1][1:]
-
-                                for p in range(len(planes)):
-                                    color = colors[p]
-                                    shape = {
-                                        'type': 'circle',
-                                        'x0': b - planes[p] / pitch_x / 2,
-                                        'y0': a - planes[p] / pitch_y / 2,
-                                        'x1': b - planes[p] / pitch_x / 2 + planes[p] / pitch_x,
-                                        'y1': a - planes[p] / pitch_y / 2 + planes[p] / pitch_y,
-                                        'fillcolor': color,
-                                        'line': dict(width=.1),
-                                        'opacity': 1
-                                    }
-                                    shapes.append(shape)
-                            else:
-                                planes = data[main_cell]['radii']
-                                planes = planes[::-1]
-
-                                colors = data[main_cell]['colors']
+                                colors = data[name]['colors']
                                 colors = colors[::-1][1:]
 
                                 for p in range(len(planes)):
