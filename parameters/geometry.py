@@ -538,6 +538,19 @@ def populate_dropdown(timestamp, main_cell, data):
 
 
 @app.callback(
+    Output('test', 'children'),
+    [Input('selected-stores', 'modified_timestamp')],
+    [State('selected-stores', 'data')]
+)
+def show_selection_locations(timestamp, data):
+    if timestamp is None:
+        raise PreventUpdate
+
+    if data:
+        return html.P('{}'.format(str(data['selected-cells'])))
+
+
+@app.callback(
     Output('selected-stores', 'data'),
     [Input('assembly-graph', 'clickData')],
     [State('selected-stores', 'data')]
@@ -558,19 +571,6 @@ def print_selected_cells(clickData, data):
 
 
 @app.callback(
-    Output('test', 'children'),
-    [Input('selected-stores', 'modified_timestamp')],
-    [State('selected-stores', 'data')]
-)
-def show_selection_locations(timestamp, data):
-    if timestamp is None:
-        raise PreventUpdate
-
-    if data:
-        return html.P('{}'.format(str(data['selected-cells'])))
-
-
-@app.callback(
     Output('some-stores', 'data'),
     [Input('submit-selected-btn', 'n_clicks')],
     [State('cell-for-selection', 'value'),
@@ -578,14 +578,41 @@ def show_selection_locations(timestamp, data):
      State('some-stores', 'data')]
 )
 def configure_stores(clicks, selected_cell, selection_locs, data):
+    data = data or {'cells': []}
+    cells = data['cells']
+
     if clicks and selected_cell:
-        test = {'selection-indices': selection_locs['selected-cells'], 'associated-cell': selected_cell}
-        return test
+
+        # If there is no entry at all for selections of specified cell type
+        if selected_cell not in [cell['name'] for cell in cells]:
+            cells.append({'name': selected_cell, 'indices': selection_locs['selected-cells']})
+
+        # Else need to loop thru indices of existing cell types to check duplicated indices
+        else:
+            # Loop over all cells
+            for i in range(len(cells)):
+                # Loop over indices of the cell
+                for j in range(len(cells[i]['indices'])):
+                    # If the cell is the same as the selected
+                    if cells[i]['name'] == selected_cell:
+                        # Set cell indices to what user can see
+                        cells[i]['indices'] = selection_locs['selected-cells']
+                    # Else the cell is not the selected one
+                    else:
+                        # Loop through the indices the user has specified
+                        for k in range(len(selection_locs)):
+                            # If the indices are in any of the cells not selected
+                            if selection_locs['selected-cells'][k] in cells[i]['indices']:
+                                # Remove those indices from that cell
+                                cells[i]['indices'].remove(selection_locs['selected-cells'][k])
+        print(data)
+        return {'cells': cells}
 
 
 @app.callback(
     Output('assembly-container', 'children'),
     [Input('cell-dropdown', 'value'),
+     Input('cell-for-selection', 'value'),
      Input('assembly-x-dimension', 'value'),
      Input('assembly-y-dimension', 'value'),
      Input('assembly-x-number', 'value'),
@@ -593,7 +620,7 @@ def configure_stores(clicks, selected_cell, selection_locs, data):
      Input('cell-stores', 'data'),
      Input('some-stores', 'data')],
 )
-def fill_assembly(main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, data, some_data):
+def fill_assembly(main_cell, unique_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, data, some_data):
     if data and main_cell:
         pitch_x = assembly_dim_x / assembly_num_x
         pitch_y = assembly_dim_y / assembly_num_y
@@ -601,7 +628,6 @@ def fill_assembly(main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, ass
         # if planes[0] * assembly_num_x > assembly_dim_x or planes[0] * assembly_num_y > assembly_dim_y:
         #     return html.P("Assembly Dimensions and/or Quantities are insensible. You will see this message"
         #                   "if your specifications are causing pins to overlap!")
-
         # else:
 
         shapes = []
@@ -611,26 +637,50 @@ def fill_assembly(main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, ass
             for b in range(assembly_num_x):
                 row.append('{}'.format(main_cell))
 
-                if some_data and [b, a] in some_data['selection-indices']:
-                    planes = data[some_data['associated-cell']]['radii']
-                    planes = planes[::-1]
+                if some_data:
+                    for c in range(len(some_data['cells'])):
+                        if some_data['cells'][c]['name'] == unique_cell:
+                            if [b, a] in some_data['cells'][c]['indices']:
+                                planes = data[some_data['cells'][c]['name']]['radii']
+                                planes = planes[::-1]
 
-                    colors = data[some_data['associated-cell']]['colors']
-                    colors = colors[::-1][1:]
+                                colors = data[some_data['cells'][c]['name']]['colors']
+                                colors = colors[::-1][1:]
 
-                    for p in range(len(planes)):
-                        color = colors[p]
-                        shape = {
-                            'type': 'circle',
-                            'x0': b - planes[p] / pitch_x / 2,
-                            'y0': a - planes[p] / pitch_y / 2,
-                            'x1': b - planes[p] / pitch_x / 2 + planes[p] / pitch_x,
-                            'y1': a - planes[p] / pitch_y / 2 + planes[p] / pitch_y,
-                            'fillcolor': color,
-                            'line': dict(width=.1),
-                            'opacity': 1
-                        }
-                        shapes.append(shape)
+                                for p in range(len(planes)):
+                                    color = colors[p]
+                                    shape = {
+                                        'type': 'circle',
+                                        'x0': b - planes[p] / pitch_x / 2,
+                                        'y0': a - planes[p] / pitch_y / 2,
+                                        'x1': b - planes[p] / pitch_x / 2 + planes[p] / pitch_x,
+                                        'y1': a - planes[p] / pitch_y / 2 + planes[p] / pitch_y,
+                                        'fillcolor': color,
+                                        'line': dict(width=.1),
+                                        'opacity': 1
+                                    }
+                                    shapes.append(shape)
+                            else:
+                                planes = data[main_cell]['radii']
+                                planes = planes[::-1]
+
+                                colors = data[main_cell]['colors']
+                                colors = colors[::-1][1:]
+
+                                for p in range(len(planes)):
+                                    color = colors[p]
+                                    shape = {
+                                        'type': 'circle',
+                                        'x0': b - planes[p] / pitch_x / 2,
+                                        'y0': a - planes[p] / pitch_y / 2,
+                                        'x1': b - planes[p] / pitch_x / 2 + planes[p] / pitch_x,
+                                        'y1': a - planes[p] / pitch_y / 2 + planes[p] / pitch_y,
+                                        'fillcolor': color,
+                                        'line': dict(width=.1),
+                                        'opacity': 1
+                                    }
+                                    shapes.append(shape)
+
                 else:
                     planes = data[main_cell]['radii']
                     planes = planes[::-1]
@@ -638,7 +688,6 @@ def fill_assembly(main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, ass
                     colors = data[main_cell]['colors']
                     colors = colors[::-1][1:]
 
-                    # if a = ?, b = ?: planes = selected_cell['planes']; colors = selected_cell['colors']
                     for p in range(len(planes)):
                         color = colors[p]
                         shape = {
