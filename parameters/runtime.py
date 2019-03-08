@@ -5,10 +5,6 @@ from dash.dependencies import Output, State, Input
 
 import plotly.graph_objs as go
 
-import openmc
-import openmc.model
-import openmc.mgxs
-
 import numpy as np
 import time
 import io
@@ -17,14 +13,13 @@ from glob import glob
 import os
 from contextlib import redirect_stdout
 
-
 app = dash.Dash()
 app.config['suppress_callback_exceptions'] = True
 
 app.layout = html.Div([
 
     # Title
-    html.H2('Runtime/Setting Configuration',
+    html.H2('Scoring/Runtime Configuration',
             style={
                 'position': 'relative',
                 'top': '0px',
@@ -68,381 +63,271 @@ app.layout = html.Div([
         html.A(id='settings-message'),
         html.Br(),
     ]),
+
+    #############################################################################
+    # Loading/Writing XML Files
+    html.Div([
+        dcc.ConfirmDialog(
+            id='confirm',
+            message='Are you sure you want to write these contents to the file?',
+        ),
+        html.Div([
+            html.Label('Geometry XML File Contents'),
+            html.Br(),
+            dcc.Textarea(id='geometry-xml', rows=20, cols=50, placeholder='Write XML contents here and Load to File'
+                                                                          'or leave blank and Load from File'),
+            html.Br(),
+            html.Button('Load Geometry XML File', n_clicks=0, id='load-geometry'),
+            html.Button('Write Geometry XML File', n_clicks=0, id='write-geometry'),
+            html.P(id='geometry-placeholder'),  # Used as dummy for mandatory Output in decorator
+
+            html.Label('Plots XML File Contents'),
+            html.Br(),
+            dcc.Textarea(id='plots-xml', rows=20, cols=50, placeholder='Write XML contents here and Load to File'
+                                                                       'or leave blank and Load from File'),
+            html.Br(),
+            html.Button('Load Plot XML File', n_clicks=0, id='load-plots'),
+            html.Button('Write Plot XML File', n_clicks=0, id='write-plots'),
+            html.P(id='plots-placeholder'),  # Used as dummy for mandatory Output in decorator
+        ],
+            style=dict(
+                display='table-cell',
+                verticalAlign="top",
+                width='30%'
+            ),
+        ),
+
+        html.Div([
+            html.Label('Materials XML File Contents'),
+            html.Br(),
+            dcc.Textarea(id='materials-xml', rows=20, cols=50, placeholder='Write XML contents here and Load to File'
+                                                                           'or leave blank and Load from File'),
+            html.Br(),
+            html.Button('Load Material XML File', n_clicks=0, id='load-materials'),
+            html.Button('Write Material XML File', n_clicks=0, id='write-materials'),
+            html.P(id='material-placeholder'),  # Used as dummy for mandatory Output in decorator
+        ],
+            style=dict(
+                width='30%',
+                display='table-cell',
+                verticalAlign="top",
+            ),
+        ),
+
+        html.Div([
+            html.Label('Tallies XML File Contents'),
+            html.Br(),
+            dcc.Textarea(id='tallies-xml', rows=20, cols=50, placeholder='Write XML contents here and Load to File'
+                                                                         'or leave blank and Load from File'),
+            html.Br(),
+            html.Button('Load Tallies XML File', n_clicks=0, id='load-tallies'),
+            html.Button('Write Tallies XML File', n_clicks=0, id='write-tallies'),
+            html.P(id='tallies-placeholder'),  # Used as dummy for mandatory Output in decorator
+
+            html.Label('Settings XML File Contents'),
+            html.Br(),
+            dcc.Textarea(id='settings-xml', rows=20, cols=50, placeholder='Write XML contents here and Load to File'
+                                                                          'or leave blank and Load from File'),
+            html.Br(),
+            html.Button('Load Settings XML File', n_clicks=0, id='load-settings'),
+            html.Button('Write Material XML File', n_clicks=0, id='write-settings'),
+            html.P(id='settings-placeholder'),  # Used as dummy for mandatory Output in decorator
+        ],
+            style=dict(
+                width='30%',
+                display='table-cell',
+                verticalAlign="top",
+            ),
+        ),
+    ], style=dict(
+        width='100%',
+        display='table',
+    ),
+    ),
+
 ])
 
-############################################################################################################
-# Settings Interface
-
-# restore_object('model').settings.confidence_intervals = False
-# restore_object('model').settings.cutoff =
-# restore_object('model').settings.eigenvalue
-# restore_object('model').settings.energy_grid =
-# restore_object('model').settings.entropy
-# restore_object('model').settings.fixed_source
-# log_grid_bins # Default: 8000
-# natural_elements = ENDF/B-VII.0 or JENDL-4.0
-# restore_object('model').settings.no_reduce = True
-# restore_object('model').settings.output.cross_sections = False
-# restore_object('model').settings.output.summary = False
-# restore_object('model').settings.output.tallies = True
-# restore_object('model').settings.ptables = True
-# restore_object('model').settings.run_cmfd = False
-# restore_object('model').settings.seed = 1
-# restore_object('model').settings.source
-# restore_object('model').settings.state_point
-# restore_object('model').settings.source_point
-# restore_object('model').settings.survival_biasing
-# restore_object('model').settings.threads
-# restore_object('model').settings.trace
-# restore_object('model').settings.track
-# restore_object('model').settings.trigger
-# restore_object('model').settings.uniform_fs
-# restore_object('model').settings.verbosity = 10
-# Resonance Scattering
-
-
-@app.callback(
-    Output('settings-message', 'children'),
-    [State('total-inactive-batches', 'value'),
-     State('generations-per-batch', 'value'),
-     State('particles-input', 'value')]
-)
-def define_settings(total_batches, generations_per_batch, particles):
-    # Make sure this works
-    cross_sections = '/cross-sections/cross_sections.xml'
-
-    return
-
 
 ############################################################################################################
-
-@app.callback(
-    Output(component_id='console-output', component_property='value'),
-    [Input(component_id='xml-button', component_property='n_clicks')], )
-def run_model(run_click):
-    if int(run_click) > 0:
-
-        xml_files = glob('./xml-files/*.xml')
-        print(xml_files)
-
-        pass_test = False
-        while not pass_test:
-            bool_array = []
-            for file in range(len(xml_files)):
-                exists = os.path.exists(xml_files[file])
-                if exists:
-                    bool_array.append(exists)
-
-            if np.array(bool_array).all():
-                pass_test = True
-                print('All files exist')
-
-            time.sleep(1)
-
-        output = io.StringIO()
-        with redirect_stdout(output):
-            openmc.run()
-
-        run_click = 0
-
-        return output.getvalue()
-
-
-#######################################################################################################################
 # Load XML from File
 @app.callback(
-    Output(component_id='materials-xml', component_property='value'),
-    [Input(component_id='load-materials', component_property='n_clicks')],
+    Output('materials-xml', 'value'),
+    [Input('load-materials', 'n_clicks')],
 )
 def show_material_xml_contents(run_click):
     if run_click > 0:
-        filename = 'materials.xml'
+        script_dir = os.path.dirname(__file__)
+        filename = os.path.join(script_dir, '../xml-files/materials.xml')
         contents = open(filename).read()
         return contents
 
 
 @app.callback(
-    Output(component_id='geometry-xml', component_property='value'),
-    [Input(component_id='load-geometry', component_property='n_clicks')],
+    Output('geometry-xml', 'value'),
+    [Input('load-geometry', 'n_clicks')],
 )
 def show_material_xml_contents(run_click):
     if run_click > 0:
-        filename = 'geometry.xml'
+        script_dir = os.path.dirname(__file__)
+        filename = os.path.join(script_dir, '../xml-files/geometry.xml')
         contents = open(filename).read()
         return contents
 
 
 @app.callback(
-    Output(component_id='tallies-xml', component_property='value'),
-    [Input(component_id='load-tallies', component_property='n_clicks')],
+    Output('tallies-xml', 'value'),
+    [Input('load-tallies', 'n_clicks')],
 )
 def show_material_xml_contents(run_click):
     if run_click > 0:
-        filename = 'tallies.xml'
+        script_dir = os.path.dirname(__file__)
+        filename = os.path.join(script_dir, '../xml-files/tallies.xml')
         contents = open(filename).read()
         return contents
 
 
 @app.callback(
-    Output(component_id='settings-xml', component_property='value'),
-    [Input(component_id='load-settings', component_property='n_clicks')],
+    Output('settings-xml', 'value'),
+    [Input('load-settings', 'n_clicks')],
 )
 def show_material_xml_contents(run_click):
     if run_click > 0:
-        filename = 'settings.xml'
+        script_dir = os.path.dirname(__file__)
+        filename = os.path.join(script_dir, '../xml-files/settings.xml')
         contents = open(filename).read()
         return contents
 
 
 @app.callback(
-    Output(component_id='plots-xml', component_property='value'),
-    [Input(component_id='load-plots', component_property='n_clicks')],
+    Output('plots-xml', 'value'),
+    [Input('load-plots', 'n_clicks')],
 )
 def show_material_xml_contents(run_click):
     if run_click > 0:
-        filename = 'plots.xml'
+        script_dir = os.path.dirname(__file__)
+        filename = os.path.join(script_dir, '../xml-files/plots.xml')
         contents = open(filename).read()
         return contents
 
 
 #######################################################################################################################
 # Write XML to File
+
+@app.callback(Output('confirm', 'displayed'),
+              [Input('write-materials', 'n_clicks'),
+               Input('write-geometry', 'n_clicks'),
+               Input('write-tallies', 'n_clicks'),
+               Input('write-settings', 'n_clicks'),
+               Input('write-plots', 'n_clicks')])
+def display_confirm(mat_click, geo_click, tal_click, set_click, plot_click):
+    if mat_click or geo_click or tal_click or set_click or plot_click:
+        return True
+    return False
+
+
 @app.callback(
-    Output(component_id='material-placeholder', component_property='children'),
-    [Input(component_id='write-materials', component_property='n_clicks')],
-    [State(component_id='materials-xml', component_property='value')],
+    Output('material-placeholder', 'children'),
+    [Input('confirm', 'submit_n_clicks')],
+    [State('materials-xml', 'value')],
 )
 def write_material_xml_contents(write_click, contents):
-    if write_click > 0:
-        filename = 'materials.xml'
+    if write_click:
+        script_dir = os.path.dirname(__file__)
+        filename = os.path.join(script_dir, '../xml-files/materials.xml')
         file = open(filename, "w+")
         file.write(contents)
         file.close()
 
 
 @app.callback(
-    Output(component_id='geometry-placeholder', component_property='children'),
-    [Input(component_id='write-geometry', component_property='n_clicks')],
-    [State(component_id='geometry-xml', component_property='value')],
+    Output('geometry-placeholder', 'children'),
+    [Input('confirm', 'submit_n_clicks')],
+    [State('geometry-xml', 'value')],
 )
 def write_material_xml_contents(write_click, contents):
-    if write_click > 0:
-        filename = 'geometry.xml'
+    if write_click:
+        script_dir = os.path.dirname(__file__)
+        filename = os.path.join(script_dir, '../xml-files/geometry.xml')
         file = open(filename, "w+")
         file.write(contents)
         file.close()
 
 
 @app.callback(
-    Output(component_id='tallies-placeholder', component_property='children'),
-    [Input(component_id='write-tallies', component_property='n_clicks')],
-    [State(component_id='tallies-xml', component_property='value')],
+    Output('tallies-placeholder', 'children'),
+    [Input('confirm', 'submit_n_clicks')],
+    [State('tallies-xml', 'value')],
 )
 def write_material_xml_contents(write_click, contents):
-    if write_click > 0:
-        filename = 'tallies.xml'
+    if write_click:
+        script_dir = os.path.dirname(__file__)
+        filename = os.path.join(script_dir, '../xml-files/tallies.xml')
         file = open(filename, "w+")
         file.write(contents)
         file.close()
 
 
 @app.callback(
-    Output(component_id='settings-placeholder', component_property='children'),
-    [Input(component_id='write-settings', component_property='n_clicks')],
-    [State(component_id='settings-xml', component_property='value')],
+    Output('settings-placeholder', 'children'),
+    [Input('confirm', 'submit_n_clicks')],
+    [State('settings-xml', 'value')],
 )
 def write_material_xml_contents(write_click, contents):
-    if write_click > 0:
-        filename = 'settings.xml'
+    if write_click:
+        script_dir = os.path.dirname(__file__)
+        filename = os.path.join(script_dir, '../xml-files/settings.xml')
         file = open(filename, "w+")
         file.write(contents)
         file.close()
 
 
 @app.callback(
-    Output(component_id='plots-placeholder', component_property='children'),
-    [Input(component_id='write-plots', component_property='n_clicks')],
-    [State(component_id='plots-xml', component_property='value')],
+    Output('plots-placeholder', 'children'),
+    [Input('confirm', 'submit_n_clicks')],
+    [State('plots-xml', 'value')],
 )
 def write_material_xml_contents(write_click, contents):
-    if write_click > 0:
-        filename = 'plots.xml'
+    if write_click:
+        script_dir = os.path.dirname(__file__)
+        filename = os.path.join(script_dir, '../xml-files/plots.xml')
         file = open(filename, "w+")
         file.write(contents)
         file.close()
 
 
 #######################################################################################################################
-@app.callback(
-    Output(component_id='score-graph-dropdown', component_property='options'),
-    [Input(component_id='scores-checklist', component_property='values')],
-)
-def disable_unscored_dropdown(scores):
-    return [{'label': score.title(), 'value': score, 'disabled': False} for score in scores]
+
+# @app.callback(
+#     Output(component_id='console-output', component_property='value'),
+#     [Input(component_id='xml-button', component_property='n_clicks')], )
+# def run_model(run_click):
+#     if int(run_click) > 0:
+#
+#         xml_files = glob('./xml-files/*.xml')
+#         print(xml_files)
+#
+#         pass_test = False
+#         while not pass_test:
+#             bool_array = []
+#             for file in range(len(xml_files)):
+#                 exists = os.path.exists(xml_files[file])
+#                 if exists:
+#                     bool_array.append(exists)
+#
+#             if np.array(bool_array).all():
+#                 pass_test = True
+#                 print('All files exist')
+#
+#             time.sleep(1)
+#
+#         output = io.StringIO()
+#         with redirect_stdout(output):
+#             openmc.run()
+#
+#         return output.getvalue()
 
 
 #######################################################################################################################
-
-
-@app.callback(
-    Output(component_id='graph', component_property='figure'),
-    [Input(component_id='score-graph-dropdown', component_property='value')],
-)
-def statepoint_evaluation(desired_score, ):
-    sp = openmc.StatePoint(filename=str(*glob('statepoint*')))
-
-    # Get k_effs for each generation
-    k_effs = sp.k_generation
-
-    # Extract the current tally separately
-    if desired_score == 'current':
-        tally = sp.get_tally(scores=[desired_score])
-        goal = tally.get_slice(scores=[desired_score])
-
-    else:
-        tally = sp.get_tally(scores=[desired_score])
-        goal = tally.get_slice(scores=[desired_score])
-
-    # Initialize MGXS Library with OpenMC statepoint data
-    # xs_lib.load_from_statepoint(sp)
-
-    dims = (10, 17, 17)
-    goal_array = goal.get_values().reshape(dims)
-
-    ##############################################################################################
-    # data = [go.Surface(z=goal_array[0],
-    #                    # zmax=c_max,
-    #                    # zmin=0,
-    #                    colorscale='Viridis',
-    #                    )]
-    ##############################################################################################
-
-    maxes = []
-    for m in range(len(goal_array)):
-        c_max = np.amax(np.array(goal_array[m]))
-        maxes.append(c_max)
-    c_max = np.max(np.array(maxes))
-
-    # Instantiate Data
-    data = [go.Surface(z=goal_array[0],
-                       zmax=c_max,
-                       zmin=0,
-                       colorscale='Viridis',
-                       )]
-
-    ##############################################
-
-    # Instantiate Frames
-    frames = []
-    steps = []
-    for k in range(len(goal_array)):
-        frame_data = go.Surface(z=goal_array[k])
-        frame = dict(data=[frame_data], name='Axial Step {}'.format(k))
-        frames.append(frame)
-
-        slider_step = dict(args=[
-            [str(goal_array[k])],
-            dict(frame=dict(duration=0, redraw=False),
-                 mode='immediate',
-                 transition={'duration': 0})
-        ],
-            label='{} cm'.format(goal_array[k]),
-            method='animate')
-        steps.append(slider_step)
-
-    ##################################################################
-
-    # Slider Control
-    sliders_dict = dict(active=0,  # Starting Position
-                        yanchor='top',
-                        xanchor='left',
-                        currentvalue=dict(
-                            font={'size': 20},
-                            prefix='Axial Step:',
-                            visible=True,
-                            xanchor='right'
-                        ),
-                        # Transition for slider button
-                        transition=dict(duration=500,
-                                        easing='cubic-in-out'),
-                        pad={'b': 10, 't': 50},
-                        len=.9,
-                        x=0.1,
-                        y=0,
-                        steps=steps
-                        )
-
-    ##################################################################
-
-    # Layout
-    layout = dict(title='Test',
-                  hovermode='closest',
-                  width=1500,
-                  height=1000,
-                  scene=dict(
-                      zaxis=dict(range=[.01, c_max])),
-                  updatemenus=[dict(type='buttons',
-
-                                    buttons=[dict(args=[None,
-                                                        dict(frame=dict(duration=500,
-                                                                        redraw=False),
-                                                             fromcurrent=True,
-                                                             transition=dict(duration=100,
-                                                                             easing='quadratic-in-out'))],
-                                                  label=u'Play',
-                                                  method=u'animate'
-                                                  ),
-
-                                             # [] around "None" are important!
-                                             dict(args=[[None], dict(frame=dict(duration=0,
-                                                                                redraw=False),
-                                                                     mode='immediate',
-                                                                     transition=dict(duration=0))],
-                                                  label='Pause',
-                                                  method='animate'
-                                                  )
-                                             ],
-
-                                    # Play Pause Button Location & Properties
-                                    direction='left',
-                                    pad={'r': 10, 't': 87},
-                                    showactive=True,
-                                    x=0.1,
-                                    xanchor='right',
-                                    y=0,
-                                    yanchor='top'
-                                    )],
-
-                  slider=dict(args=[
-                      'slider.value', {
-                          'duration': 1000,
-                          'ease': 'cubic-in-out'
-                      }
-                  ],
-                      # initialValue=burnup[0],           # ???
-                      plotlycommand='animate',
-                      # values=burnup,                    # ???
-                      visible=True
-                  ),
-                  sliders=[sliders_dict]
-                  )
-
-    ##################################################################
-
-    figure = dict(data=data, layout=layout, frames=frames)
-
-    ###################################
-    # trace = go.Scatter(
-    #     x=np.arange(len(k_effs)),
-    #     y=k_effs,
-    #     mode='line'
-    # )
-    # data = [trace]
-    # layout = dict(title='K-effective vs Iteration')
-    # figure = dict(data=data, layout=layout)
-    ###################################
-
-    return figure
 
 
 if __name__ == '__main__':

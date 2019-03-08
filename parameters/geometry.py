@@ -112,7 +112,16 @@ app.layout = html.Div([
         Now that a cell has been successfully created, it is now available for selection in the 
         dropdown below. The selection made from this cell will create an assembly based on the specifications
         of the selected cell. Don't worry, you will be able to pick and choose individual cells to change 
-        their specifications if needed e.g. control rods, water holes, etc.
+        their specifications if needed e.g. control rods, water holes, etc. A little description on how to do this:
+        Locations of selected cells will be displayed someplace below - this is your main guide when inserting 
+        cell universes into the assembly. Keeping track of this information is important because it does not reset once
+        an injection is made and this may initially seem a bit unintuitive. Your first step is to make a selection. 
+        By clicking on a cell universe multiple times, you may select and deselect the universe from your list of 
+        indices. Once you are content with the selection you have made, you may choose what type of cell universe you 
+        would like to inject into the chosen indices. You may also "overwrite" other cell universes, i.e. priority is 
+        given to your most recent injection. So, if there are indices for cell universes of a type other than your 
+        current selection that match your currently selected indices, those indices will be removed from the other cell indices 
+        (ones not selected).
            """),
     html.H6('Cell Selection'),
     html.Div([
@@ -140,9 +149,9 @@ app.layout = html.Div([
             """),
             dcc.Dropdown(id='cell-for-selection'),
             html.P("Selected Cells: "), html.Div(id='test'),
+            html.Button('Submit cell into selection(s)', id='submit-selected-btn'),
             # TODO: Link to Callback
             html.Div(id='cell-preview'),
-            html.Button('Submit cell into selection(s)', id='submit-selected-btn')
         ],
             style=dict(
                 width='35%',
@@ -519,7 +528,7 @@ def populate_dropdown(timestamp, data):
     Output('cell-for-selection', 'options'),
     [Input('cell-stores', 'modified_timestamp'),
      Input('cell-dropdown', 'value')],
-     [State('cell-stores', 'data')]
+    [State('cell-stores', 'data')]
 )
 def populate_dropdown(timestamp, main_cell, data):
     if timestamp is None:
@@ -532,6 +541,7 @@ def populate_dropdown(timestamp, main_cell, data):
             options.remove({'label': main_cell, 'value': main_cell})
 
         return options
+
 
 #######################################################################################################################
 # Assemblies
@@ -599,13 +609,6 @@ def configure_stores(clicks, selected_cell, selection_locs, data):
                         # Remove those indices from that cell
                         data[cells[i]]['indices'].remove(data[selected_cell]['indices'][k])
 
-                    # # Loop through the indices the user has specified
-                    # for k in range(len(selection_locs)):
-                    #     # If the indices are in any of the cells not selected
-                    #     if selection_locs['selected-cells'][k] in cells[i]['indices']:
-                    #         # Remove those indices from that cell
-                    #         print("removing {} from {}".format(selection_locs['selected-cells'][k], cells[i]['name']))
-                    #         cells[i]['indices'].remove(selection_locs['selected-cells'][k])
         print(data)
         return data
 
@@ -743,6 +746,25 @@ def fill_assembly(main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, ass
         figure = dict(data=data, layout=layout)
 
         return dcc.Graph(id='assembly-graph', figure=figure)
+
+
+# TODO: Some kind of weird problem arises with this callback/output component
+# @app.callback(
+#     Output('assembly-stores', 'data'),
+#     [Input('store-assembly-btn', 'n_clicks')],
+#     [State('cell-dropdown', 'value'),
+#      State('assembly-x-dimension', 'value'),
+#      State('assembly-y-dimension', 'value'),
+#      State('assembly-x-number', 'value'),
+#      State('assembly-y-number', 'value'),
+#      State('some-stores', 'data')]
+# )
+# def store_assembly_data(click, main_cell, x_dim, y_dim, x_num, y_num, data):
+#     if click:
+#         print(main_cell, x_dim, y_dim, x_num, y_num)
+#         print(data)
+#
+#         return data
 
 
 #######################################################################################################################
