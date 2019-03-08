@@ -1,4 +1,3 @@
-import dash
 import dash_core_components as dcc
 import dash_html_components as html
 import plotly.figure_factory as ff
@@ -9,6 +8,8 @@ import numpy as np
 import pandas as pd
 import json
 from dash.exceptions import PreventUpdate
+
+from app import app
 
 # Add Periodic Table Data
 element = [['Hydrogen', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'Helium'],
@@ -139,11 +140,8 @@ periodic_table['layout'].update(
 
 #######################################################################################################################
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-app = dash.Dash(external_stylesheets=external_stylesheets)
-app.config['suppress_callback_exceptions'] = True
 
-app.layout = html.Div([
+layout = html.Div([
 
     # Title
     html.H2('Materials Configuration',
@@ -157,10 +155,8 @@ app.layout = html.Div([
                 'color': '#4D637F'
             }),
 
-    ################################################################################
     html.Br(),
 
-    dcc.Store(id='material-stores', storage_type='session'),
     html.Div([
         dcc.Graph(id='periodic-table',
                   figure=periodic_table
@@ -341,6 +337,3 @@ def tabulate_materials(timestamp, data):
     table = ff.create_table(df)
     return table
 
-
-if __name__ == '__main__':
-    app.run_server(debug=True)

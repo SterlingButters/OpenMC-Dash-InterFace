@@ -15,23 +15,29 @@ combination of these obstacles and the notable issues above encourage a temporar
 I am attempting to essentially restart this problem from scratch. over the course of time, I have had a chance to reevaluate
 potential solutions to certain issues. Standby for results though it may be awhile. 
 
-![alt text](https://github.com/SterlingButters/OpenMC-Dash-InterFace/blob/master/examples/Demo.png)
-![alt text](https://github.com/SterlingButters/OpenMC-Dash-InterFace/blob/master/examples/Score.png)
+![alt text](outputs/Demo.png)
+![alt text](outputs/Score.png)
 
 
 ## Summary
-I've been wanting to do a project using Dash now for some time. I've decided to attempt to replicate (more or less) 
+I've decided to attempt to replicate (more or less) 
 ERSN for OpenMC (Open Source Monte Carlo Neutron Transport Code) but using Dash. This project will create a GUI for 
 setting up OpenMC simulations, running them, and depicting the results. Dash is pythonic way of coding HTML and Js with 
-callbacks. Clone the project and run `main.py` in the project directory.
+callbacks. Right now the project is segmented into several dash apps in the `parameters` directory. While you can run 
+`main.py` in the project directory, it wont do much for you - I am merely using it as a reference. Once each dash app is 
+working individually, I will combine them into a single application. 
+
+It is unlikely that I will be able to create support for every feature of OpenMC by myself so the goal right now is to 
+merely get a UI working for your average joe or NUEN B.S. college student, then maybe add support where requests 
+are made. 
 
 ### Desired 1st release features
 ##### Materials:
 ##### Geometry:
-- Cell region select feature
-- Assembly-cell selection feature
-- Assembly fill dropdown with 2 buttons (fill whole assembly, fill selected)
-- Set whole geometry boundary boundaries/min/max based on geometry dimensions (set percentage of boundary clearance)
+- ~~Cell region select feature~~
+- ~~Assembly-cell selection feature~~
+- ~~Assembly fill dropdown~~
+- Set whole geometry boundary boundaries/min/max based on geometry dimensions
 ##### Mesh:
 - set resolution
 ##### Cross-Sections:
@@ -47,23 +53,8 @@ callbacks. Clone the project and run `main.py` in the project directory.
 - most other settings
 - particle traces
 
-##### Misc:
-- messages everywhere with some documentation between to explain to user both the interface and what selections mean
-	
-
 #### TODO's:
-- Support 5 cell types and 3 assembly types until dynamic callbacks are available (or find workaround)
-- Fix "geometrical boundary config" dependent on assembly
 - Make boundaries dependent on root region
-- Figure out why not all messages display
 - ~~Create cross-section graphs for radionuclides~~
-- Add 3D rendering of geometry... should be easy
+- Add 3D rendering of geometry
 
-
-#### Wishlist:
-- better isotope selection
-- all planes
-- 3d depiction of geometry
-- highlight cell region
-- get cell relayout for dims
-- periodic boundary conditions
