@@ -1,15 +1,10 @@
-import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, State, Input
 
-import plotly.graph_objs as go
+from app import app
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-app = dash.Dash(external_stylesheets=external_stylesheets)
-app.config['suppress_callback_exceptions'] = True
-
-app.layout = html.Div([
+layout = html.Div([
 
     # Title
     html.H2('Tallies/Scoring & Cross-Section Configuration',
@@ -22,8 +17,6 @@ app.layout = html.Div([
                 'font-size': '4.0rem',
                 'color': '#4D637F'
             }), html.Br(),
-
-    dcc.Store(id='score-stores', storage_type='session'),
 
     html.Div([
         html.H5('Select mesh filters for scoring'),
@@ -164,7 +157,7 @@ app.layout = html.Div([
             display='table',
         ),
         ),
-        html.Button('Submit Desired Scores to Memory', id='submit-scores-btn', n_clicks=0)
+        html.Button('Submit Desired Scores to Memory', id='submit-scores-btn', n_clicks=0),
 
         ########################################################################################################
         html.Label('Number of Energy Groups'),
@@ -177,6 +170,10 @@ app.layout = html.Div([
             value=5,
             marks={i: i for i in range(0, 100, 5)},
         ),
+        dcc.RadioItems(id='scale-type', options=[
+            {'label': 'Linear', 'value': 'lin'},
+            {'label': 'Logarithmic', 'value': 'log'}
+        ]),
         html.Br(),
         html.Label('Select mesh to apply to cross-section calculations'),
         html.A(id='cross-section-message'),
@@ -224,8 +221,17 @@ def store_scores(click, scores1, scores2, scores3, scores4):
 #     mgxs_lib.num_delayed_groups = 6
 #
 #     # Specify multi-group cross section types to compute
-#     mgxs_lib.mgxs_types = ['total', 'transport', 'nu-scatter matrix', 'kappa-fission', 'inverse-velocity', 'chi-prompt',
-#                            'prompt-nu-fission', 'chi-delayed', 'delayed-nu-fission', 'beta']
+#     mgxs_lib.mgxs_types = ['total',
+#                            'transport',
+#                            'nu-scatter matrix',
+#                            'kappa-fission',
+#                            'inverse-velocity',
+#                            'chi-prompt',
+#                            'prompt-nu-fission',
+#                            'chi-delayed',
+#                            'delayed-nu-fission',
+#                            'beta']
+
 #     # Specify a "mesh" domain type for the cross section tally filters
 #     mgxs_lib.domain_type = 'mesh'
 #
@@ -239,7 +245,3 @@ def store_scores(click, scores1, scores2, scores3, scores4):
 #     message = 'Cross-section library built'
 #
 #     return message
-
-
-if __name__ == '__main__':
-    app.run_server(debug=True)

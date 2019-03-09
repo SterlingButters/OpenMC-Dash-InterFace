@@ -1,23 +1,16 @@
-import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, State, Input
 import dash_daq as daq
-import json
 from dash.exceptions import PreventUpdate
 
 import plotly.graph_objs as go
 
 import numpy as np
-import re
 
-external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
-app = dash.Dash(external_stylesheets=external_stylesheets)
-app.config['suppress_callback_exceptions'] = True
+from app import app
 
-#######################################################################################################################
-
-app.layout = html.Div([
+layout = html.Div([
     html.H2('Geometry Configuration',
             style={
                 'position': 'relative',
@@ -29,12 +22,6 @@ app.layout = html.Div([
                 'color': '#4D637F'
             }),
     html.Div(style=dict(height=20)),
-
-    dcc.Store(id='color-stores', storage_type='session'),
-    dcc.Store(id='cell-stores', storage_type='session'),
-    dcc.Store(id='selected-stores', storage_type='session'),
-    dcc.Store(id='some-stores', storage_type='session'),
-    # dcc.Store(id='assembly-stores', storage_type='session'),
 
     html.P("""
         Second, we need to create our geometries. As an overview, since this interface currently
@@ -64,6 +51,7 @@ app.layout = html.Div([
 
         html.Div([
             html.H6("List of Materials"),
+            # TODO: Callback to populate dropdown with existing materials
             dcc.Dropdown(id='material-dropdown', multi=True,
                          options=[{'label': 'Material1', 'value': 'Material1'},
                                   {'label': 'Material2', 'value': 'Material2'},
@@ -147,7 +135,7 @@ app.layout = html.Div([
                 The dropdown below is used to specify the cell type that is to be used to replace
                 only the selected cells.
             """),
-            dcc.Dropdown(id='cell-for-selection'),
+            dcc.Dropdown(id='injection-cell'),
             html.P("Selected Cells: "), html.Div(id='test'),
             html.Button('Submit cell into selection(s)', id='submit-selected-btn'),
             # TODO: Link to Callback
@@ -179,7 +167,6 @@ app.layout = html.Div([
         display='table',
     ),
     ),
-    # TODO: Link to CallBack
     dcc.Input(id='assembly-name'),
     html.Button('Store Assembly', id='store-assembly-btn', n_clicks=0),
     html.Div(style=dict(height=30)),
@@ -525,7 +512,7 @@ def populate_dropdown(timestamp, data):
 
 
 @app.callback(
-    Output('cell-for-selection', 'options'),
+    Output('injection-cell', 'options'),
     [Input('cell-stores', 'modified_timestamp'),
      Input('cell-dropdown', 'value')],
     [State('cell-stores', 'data')]
@@ -549,8 +536,8 @@ def populate_dropdown(timestamp, main_cell, data):
 
 @app.callback(
     Output('test', 'children'),
-    [Input('selected-stores', 'modified_timestamp')],
-    [State('selected-stores', 'data')]
+    [Input('injection-stores', 'modified_timestamp')],
+    [State('injection-stores', 'data')]
 )
 def show_selection_locations(timestamp, data):
     if timestamp is None:
@@ -561,9 +548,9 @@ def show_selection_locations(timestamp, data):
 
 
 @app.callback(
-    Output('selected-stores', 'data'),
+    Output('injection-stores', 'data'),
     [Input('assembly-graph', 'clickData')],
-    [State('selected-stores', 'data')]
+    [State('injection-stores', 'data')]
 )
 def print_selected_cells(clickData, data):
     data = data or {'selected-cells': []}
@@ -580,51 +567,66 @@ def print_selected_cells(clickData, data):
     return {'selected-cells': selected_cells}
 
 
+# TODO: Merge next 2 callbacks so that assembly is graphed from memory only
 @app.callback(
-    Output('some-stores', 'data'),
-    [Input('submit-selected-btn', 'n_clicks')],
-    [State('cell-for-selection', 'value'),
-     State('selected-stores', 'data'),
-     State('some-stores', 'data')]
+    Output('assembly-stores', 'data'),
+    [Input('submit-selected-btn', 'n_clicks'),
+     Input('cell-dropdown', 'value'),
+     Input('assembly-x-dimension', 'value'),
+     Input('assembly-y-dimension', 'value'),
+     Input('assembly-x-number', 'value'),
+     Input('assembly-y-number', 'value')],
+    [State('injection-cell', 'value'),
+     State('injection-stores', 'data'),
+     State('assembly-stores', 'data')]
 )
-def configure_stores(clicks, selected_cell, selection_locs, data):
-    data = data or {}
+def configure_stores(clicks, main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, selected_cell, selection_locs, data):
+    data = data or {'main-cell': {}, 'injected-cells': {}, 'assembly-metrics': {}}
+    cells = data['injected-cells']
+
+    data['main-cell'] = main_cell
+    data['assembly-metrics']['assembly-dim-x'] = assembly_dim_x
+    data['assembly-metrics']['assembly-dim-y'] = assembly_dim_y
+    data['assembly-metrics']['assembly-num-x'] = assembly_num_x
+    data['assembly-metrics']['assembly-num-y'] = assembly_num_y
 
     if clicks and selected_cell:
 
         # If there is no entry at all for selections of specified cell type
-        if selected_cell not in data.keys():
-            data.update({'{}'.format(selected_cell): {'indices': selection_locs['selected-cells']}})
+        if selected_cell not in cells.keys():
+            cells.update({'{}'.format(selected_cell): {'indices': selection_locs['selected-cells']}})
 
         # Else need to loop thru indices of existing cell types to check duplicated indices
-        data[selected_cell]['indices'] = selection_locs['selected-cells']
+        cells[selected_cell]['indices'] = selection_locs['selected-cells']
 
-        for k in range(len(data[selected_cell]['indices'])):
+        for k in range(len(cells[selected_cell]['indices'])):
             # If the indices are in any of the cells not selected
-            cells = list(data.keys())
-            for i in range(len(cells)):
-                if selected_cell != cells[i]:
+            cells_list = list(cells.keys())
+            for i in range(len(cells_list)):
+                if selected_cell != cells_list[i]:
 
-                    if data[selected_cell]['indices'][k] in data[cells[i]]['indices']:
+                    if cells[selected_cell]['indices'][k] in cells[cells_list[i]]['indices']:
                         # Remove those indices from that cell
-                        data[cells[i]]['indices'].remove(data[selected_cell]['indices'][k])
+                        cells[cells_list[i]]['indices'].remove(cells[selected_cell]['indices'][k])
 
-        print(data)
-        return data
+    print(data)
+    return data
 
 
 @app.callback(
     Output('assembly-container', 'children'),
-    [Input('cell-dropdown', 'value'),
-     Input('assembly-x-dimension', 'value'),
-     Input('assembly-y-dimension', 'value'),
-     Input('assembly-x-number', 'value'),
-     Input('assembly-y-number', 'value'),
-     Input('cell-stores', 'data'),
-     Input('some-stores', 'data')],
+    [Input('cell-stores', 'data'),
+     Input('assembly-stores', 'data')],
 )
-def fill_assembly(main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, data, some_data):
+def fill_assembly(data, assembly_data):
+    main_cell = assembly_data['main-cell']
+
     if data and main_cell:
+        assembly_dim_x = assembly_data['assembly-metrics']['assembly-dim-x']
+        assembly_dim_y = assembly_data['assembly-metrics']['assembly-dim-y']
+        assembly_num_x = assembly_data['assembly-metrics']['assembly-num-x']
+        assembly_num_y = assembly_data['assembly-metrics']['assembly-num-y']
+
         pitch_x = assembly_dim_x / assembly_num_x
         pitch_y = assembly_dim_y / assembly_num_y
 
@@ -640,9 +642,9 @@ def fill_assembly(main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, ass
             for b in range(assembly_num_x):
                 row.append('{}'.format(main_cell))
 
-                if some_data:
+                if assembly_data:
                     # If index is not specified in any of cell indices
-                    if [b, a] not in [result for name in some_data.keys() for result in some_data[name]['indices']]:
+                    if [b, a] not in [result for cell_name in assembly_data['injected-cells'].keys() for result in assembly_data['injected-cells'][cell_name]['indices']]:
 
                         planes = data[main_cell]['radii']
                         planes = planes[::-1]
@@ -666,12 +668,12 @@ def fill_assembly(main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, ass
 
                     # Index is
                     else:
-                        for name in some_data.keys():
-                            if [b, a] in some_data[name]['indices']:
-                                planes = data[name]['radii']
+                        for cell_name in assembly_data['injected-cells'].keys():
+                            if [b, a] in assembly_data['injected-cells'][cell_name]['indices']:
+                                planes = data[cell_name]['radii']
                                 planes = planes[::-1]
 
-                                colors = data[name]['colors']
+                                colors = data[cell_name]['colors']
                                 colors = colors[::-1][1:]
 
                                 for p in range(len(planes)):
@@ -748,25 +750,6 @@ def fill_assembly(main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, ass
         return dcc.Graph(id='assembly-graph', figure=figure)
 
 
-# TODO: Some kind of weird problem arises with this callback/output component
-# @app.callback(
-#     Output('assembly-stores', 'data'),
-#     [Input('store-assembly-btn', 'n_clicks')],
-#     [State('cell-dropdown', 'value'),
-#      State('assembly-x-dimension', 'value'),
-#      State('assembly-y-dimension', 'value'),
-#      State('assembly-x-number', 'value'),
-#      State('assembly-y-number', 'value'),
-#      State('some-stores', 'data')]
-# )
-# def store_assembly_data(click, main_cell, x_dim, y_dim, x_num, y_num, data):
-#     if click:
-#         print(main_cell, x_dim, y_dim, x_num, y_num)
-#         print(data)
-#
-#         return data
-
-
 #######################################################################################################################
 # Boundaries
 
@@ -796,6 +779,3 @@ def fill_assembly(main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, ass
 #             'Y-min': min_y, 'Y-max': max_y, 'Y-btype': btype_y,
 #             'Z-min': min_z, 'Z-max': max_z, 'Z-btype': btype_y}
 
-
-if __name__ == '__main__':
-    app.run_server(debug=True)

@@ -1,22 +1,22 @@
-import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, State, Input
 
-import plotly.graph_objs as go
+import openmc
+import openmc.model
+import openmc.mgxs
 
 import numpy as np
 import time
 import io
-import re
 from glob import glob
 import os
+from shutil import copyfile
 from contextlib import redirect_stdout
 
-app = dash.Dash()
-app.config['suppress_callback_exceptions'] = True
+from app import app
 
-app.layout = html.Div([
+layout = html.Div([
 
     # Title
     html.H2('Scoring/Runtime Configuration',
@@ -144,6 +144,14 @@ app.layout = html.Div([
         display='table',
     ),
     ),
+    #############################################################################
+    # Simulation
+    html.Button('Generate XML Files', id='xml-button', n_clicks=0),
+    html.Div(id='memory-display'),
+    html.Button('Run Simulation', id='run-button', n_clicks=0),
+    html.Br(),
+    dcc.Textarea(id='console-output', rows=40, cols=75, placeholder='Console Output will appear here...',
+                 readOnly=True),
 
 ])
 
@@ -297,38 +305,90 @@ def write_material_xml_contents(write_click, contents):
 
 #######################################################################################################################
 
-# @app.callback(
-#     Output(component_id='console-output', component_property='value'),
-#     [Input(component_id='xml-button', component_property='n_clicks')], )
-# def run_model(run_click):
-#     if int(run_click) > 0:
-#
-#         xml_files = glob('./xml-files/*.xml')
-#         print(xml_files)
-#
-#         pass_test = False
-#         while not pass_test:
-#             bool_array = []
-#             for file in range(len(xml_files)):
-#                 exists = os.path.exists(xml_files[file])
-#                 if exists:
-#                     bool_array.append(exists)
-#
-#             if np.array(bool_array).all():
-#                 pass_test = True
-#                 print('All files exist')
-#
-#             time.sleep(1)
-#
-#         output = io.StringIO()
-#         with redirect_stdout(output):
-#             openmc.run()
-#
-#         return output.getvalue()
+@app.callback(
+    Output('memory-display', 'children'),
+    [Input('xml-button', 'n_clicks')],
+    [State('material-stores', 'data'),
 
+     State('cell-stores', 'data'),
+     State('assembly-stores', 'data')]
+)
+def build_model(click, material_data, cell_data, assembly_data):
+    if click:
+        model = openmc.model.Model()
+
+        print(material_data)
+        print(cell_data)
+        print(assembly_data)
+
+        materials = openmc.Materials([])
+        for material in material_data.keys():
+            mat_object = openmc.Material(name=material)
+            mat_object.set_density('g/cm3', 10.062)  # TODO
+            mat_object.temperature = 200             # TODO
+            mat_object.depletable = False
+
+            elements = material_data[material]['elements']
+            masses = material_data[material]['masses']
+            compositions = material_data[material]['compositions']
+            types = material_data[material]['types']
+
+            for i in range(len(elements)):
+                if float(masses[i]).is_integer():
+                    mat_object.add_element(element=elements[i],
+                                           percent=compositions[i],
+                                           percent_type=types[i],
+                                           enrichment=None)
+                else:
+                    mat_object.add_nuclide(nuclide=str(masses[i])+elements[i],
+                                           percent=compositions[i],
+                                           percent_type=types[i])
+
+            materials.append(mat_object)
+
+        model.materials = materials
+
+        return html.P('Success')
 
 #######################################################################################################################
 
 
-if __name__ == '__main__':
-    app.run_server(debug=True)
+@app.callback(
+    Output('console-output', 'value'),
+    [Input('run-button', 'n_clicks')], )
+def run_model(click):
+    if int(click) > 0:
+
+        script_dir = os.path.dirname(__file__)
+        xml_path_src = os.path.join(script_dir, '../xml-files/')
+        xml_files_src = glob('{}*.xml'.format(xml_path_src))
+
+        for file in xml_files_src:
+            xml_file_name = os.path.basename(file)
+            copyfile(os.path.join(xml_path_src, xml_file_name), os.path.join(script_dir, xml_file_name))
+
+        xml_files_dst = glob('{}*.xml'.format(script_dir))
+        print(xml_files_dst)
+
+        pass_test = False
+        while not pass_test:
+            bool_array = []
+            for file in range(len(xml_files_dst)):
+                exists = os.path.exists(xml_files_dst[file])
+                if exists:
+                    bool_array.append(exists)
+
+            if np.array(bool_array).all():
+                pass_test = True
+                print('All files exist')
+
+            time.sleep(1)
+
+        output = io.StringIO()
+        with redirect_stdout(output):
+            openmc.run()
+
+        for file in xml_files_dst:
+            os.remove(file)
+
+        return output.getvalue()

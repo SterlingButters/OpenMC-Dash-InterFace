@@ -153,8 +153,7 @@ def pwr_pin_cell():
     clad_or = openmc.ZCylinder(x0=0, y0=0, R=0.45720, name='Clad OR')
     left = openmc.XPlane(x0=-pitch/2, name='left', boundary_type='reflective')
     right = openmc.XPlane(x0=pitch/2, name='right', boundary_type='reflective')
-    bottom = openmc.YPlane(y0=-pitch/2, name='bottom',
-                           boundary_type='reflective')
+    bottom = openmc.YPlane(y0=-pitch/2, name='bottom', boundary_type='reflective')
     top = openmc.YPlane(y0=pitch/2, name='top', boundary_type='reflective')
 
     # Instantiate Cells
