@@ -8,17 +8,18 @@ from parameters import material, geometry, mesh_settings, scoring_xsections, run
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False, pathname='/parameters/material'),
 
+    # TODO: Storage data not persist through pathname change
     # Materials
-    dcc.Store(id='material-stores', storage_type='session'),
+    dcc.Store(id='material-stores', storage_type='memory'),
     # Geometry
-    dcc.Store(id='color-stores', storage_type='session'),
-    dcc.Store(id='cell-stores', storage_type='session'),
-    dcc.Store(id='injection-stores', storage_type='session'),
-    dcc.Store(id='temp-assembly-stores', storage_type='session'),
+    dcc.Store(id='color-stores', storage_type='memory'),
+    dcc.Store(id='cell-stores', storage_type='memory'),
+    dcc.Store(id='injection-stores', storage_type='memory'),
+    dcc.Store(id='temp-assembly-stores', storage_type='memory'),
     # dcc.Store(id='assembly-stores', storage_type='session'),
-    dcc.Store(id='boundary-stores', storage_type='session'),
+    dcc.Store(id='boundary-stores', storage_type='memory'),
     # Scores
-    dcc.Store(id='score-stores', storage_type='session'),
+    dcc.Store(id='score-stores', storage_type='memory'),
 
     dcc.Link('Materials', href='/parameters/material'), html.Br(),
     dcc.Link('Geometry', href='/parameters/geometry'), html.Br(),

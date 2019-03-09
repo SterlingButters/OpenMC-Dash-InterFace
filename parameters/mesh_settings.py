@@ -1,4 +1,3 @@
-# TODO: Mesh/Scoring/Settings in one
 import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
@@ -175,14 +174,3 @@ layout = html.Div([
 #######################################################################################################################
 # Settings Interface
 
-# @app.callback(
-#     Output('settings-message', 'children'),
-#     [State('total-inactive-batches', 'value'),
-#      State('generations-per-batch', 'value'),
-#      State('particles-input', 'value')]
-# )
-# def define_settings(total_batches, generations_per_batch, particles):
-#     # Make sure this works
-#     cross_sections = '/cross-sections/cross_sections.xml'
-#
-#     return

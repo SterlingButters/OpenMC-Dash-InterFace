@@ -202,7 +202,6 @@ def store_scores(click, scores1, scores2, scores3, scores4, score_data):
     return score_data
 
 
-# TODO: import mesh into function
 # @app.callback(
 #     Output('cross-section-message', 'children'),
 #     [Input('energy-group-input', 'value'),
@@ -210,7 +209,6 @@ def store_scores(click, scores1, scores2, scores3, scores4, score_data):
 # )
 # def build_xs_library(groups, meshes):
 #     energy_groups = openmc.mgxs.EnergyGroups()
-#     # TODO: Make sure the groups+1 is accurate
 #     energy_groups.group_edges = np.logspace(-3, 7.3, groups + 1)
 #
 #     # Instantiate a 1-group EnergyGroups object
@@ -218,7 +216,6 @@ def store_scores(click, scores1, scores2, scores3, scores4, score_data):
 #     # one_group.group_edges = np.array([energy_groups.group_edges[0], energy_groups.group_edges[-1]])
 #
 #     mgxs_lib.energy_groups = energy_groups
-#     # TODO: Get user-specified delayed groups
 #     mgxs_lib.num_delayed_groups = 6
 #
 #     # Specify multi-group cross section types to compute

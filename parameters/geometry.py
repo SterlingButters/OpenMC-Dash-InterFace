@@ -49,7 +49,7 @@ layout = html.Div([
 
         html.Div([
             html.H6("List of Materials"),
-            # TODO: Callback to populate dropdown with existing materials
+            # TODO: Remove these options once app is complete
             dcc.Dropdown(id='material-dropdown', multi=True,
                          options=[{'label': 'Material1', 'value': 'Material1'},
                                   {'label': 'Material2', 'value': 'Material2'},
@@ -565,7 +565,6 @@ def print_selected_cells(clickData, data):
     return {'selected-cells': selected_cells}
 
 
-# TODO: In order to support a core run, assembly data must be able to hold multiple assemblies
 @app.callback(
     Output('temp-assembly-stores', 'data'),
     [Input('submit-selected-btn', 'n_clicks'),
@@ -767,6 +766,11 @@ def fill_assembly(data, assembly_data):
 #                                   })
 
 #######################################################################################################################
+# Full-Core
+# TODO
+
+
+#######################################################################################################################
 # Boundaries
 
 # Store whole-geometry outer boundary and type
@@ -793,7 +797,5 @@ def set_boundaries(clicks, range_x, range_y, range_z, btype_x, btype_y, btype_z,
         boundary_data.update({'X-min': min_x, 'X-max': max_x, 'X-btype': btype_x,
                               'Y-min': min_y, 'Y-max': max_y, 'Y-btype': btype_y,
                               'Z-min': min_z, 'Z-max': max_z, 'Z-btype': btype_z})
-
-        print(min_x, min_y, min_y)
 
     return boundary_data

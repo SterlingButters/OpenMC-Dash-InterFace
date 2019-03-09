@@ -308,24 +308,33 @@ def write_material_xml_contents(write_click, contents):
 @app.callback(
     Output('memory-display', 'children'),
     [Input('xml-button', 'n_clicks')],
+
     [State('material-stores', 'data'),
 
      State('cell-stores', 'data'),
-     State('temp-assembly-stores', 'data'),
-     State('boundary-stores', 'data')]
+     State('temp-assembly-stores', 'data'),  # TODO: Change to all_data
+     State('boundary-stores', 'data'),
+
+     State('score-stores', 'data')]
 )
-def build_model(click, material_data, cell_data, assembly_data, boundary_data):
+def build_model(click, material_data, cell_data, assembly_data, boundary_data, score_data):
     if click:
         model = openmc.model.Model()
 
         print(material_data)
+
         print(cell_data)
         print(assembly_data)
+        print(boundary_data)
 
+        print(score_data)
+
+        #######################################
+        # Materials
         materials = openmc.Materials([])
         for material in material_data.keys():
-            density = material['density']
-            temperature = material['temperature']
+            density = material_data[material]['density']
+            temperature = material_data[material]['temperature']
 
             mat_object = openmc.Material(name=material)
             mat_object.set_density('g/cm3', density)
@@ -351,6 +360,34 @@ def build_model(click, material_data, cell_data, assembly_data, boundary_data):
             materials.append(mat_object)
 
         model.materials = materials
+
+        #######################################
+        # Mesh
+
+        #######################################
+        # Cross-sections
+
+        #######################################
+        # Tallies/Scores
+
+        model.tallies = openmc.Tallies()
+        # mgxs_lib.add_to_tallies_file(model.tallies, merge=True)
+
+        # Instantiate a flux tally; Other valid options: 'current', 'fission', etc
+        mesh_tally = openmc.Tally(name='Mesh')
+        # flux_tally.filters = [mesh_filter]
+        mesh_tally.scores = score_data['scores']
+
+        energy_tally = openmc.Tally(name='Energy')
+        # energy_tally.filters = [energy_filter]
+        energy_tally.scores = score_data['scores']
+
+        # Add tallies to the tallies file
+        model.tallies.append(mesh_tally)
+        model.tallies.append(energy_tally)
+
+        #######################################
+        # Settings
 
         return html.P('Success')
 

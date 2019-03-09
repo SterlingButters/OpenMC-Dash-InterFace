@@ -261,7 +261,6 @@ layout = html.Div([
 
 
 # Populate Material Dropdown
-# TODO: Have dropdown populate from memory in order to add Density and temperature
 @app.callback(
     Output('material-dropdown', 'options'),
     [Input('material-stores', 'data')],
