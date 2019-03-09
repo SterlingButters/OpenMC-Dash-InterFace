@@ -1,12 +1,13 @@
+import json
+
 import dash_core_components as dcc
-import dash_html_components as html
-import plotly.figure_factory as ff
-from dash.dependencies import Output, State, Input
-import plotly.graph_objs as go
 import dash_daq as daq
+import dash_html_components as html
 import numpy as np
 import pandas as pd
-import json
+import plotly.figure_factory as ff
+import plotly.graph_objs as go
+from dash.dependencies import Output, State, Input
 from dash.exceptions import PreventUpdate
 
 from app import app
@@ -164,8 +165,11 @@ layout = html.Div([
         html.Div(id='chosen-element'),
         html.H3("List of Materials"),
         dcc.Dropdown(id='material-dropdown'),
-        html.H4("Add a Material"),
-        html.P("""
+
+        html.Div([
+            html.Div([
+                html.H4("Add a Material"),
+                html.P("""
             First, we need to create some materials with which we plan to fill our geometry. 
             Begin by entering the desired parameters and then submit the material to memory 
             once the parameters are acceptable. If a required parameter is unfilled, the material
@@ -173,31 +177,79 @@ layout = html.Div([
             The dropdown menu selector allows you to select previously submitted materials to view
             or make changes to subsequent parameters.  
                """),
-        html.Div([dcc.Input(id='material-name', placeholder='Enter Material Name', type="text"),
-                  dcc.Input(id='material-density', placeholder='Enter Material Density', type='number'),
-                  dcc.Input(id='material-temperature', placeholder='Enter Material Temperature',
-                            type='number'),  # TODO: Thermometer
-                  html.Button('Submit Material', id='submit-material-button', n_clicks=0),
-                  html.Br()
-                  ]),
-        html.H4("Add a Composition Constituent"),
-        html.P("""
-            Now that a material has been submitted, it is time to define its composition. You may make a 
-            selection from the periodic table to define the element and then choose whether you would like 
-            to make the composition entry based on atomic or weight %. If these fields are left blank, the 
-            natural element will be selected from the periodic table with no alteration.
-               """),
-        # TODO: Add Snackbar here
-        html.Div([dcc.Input(id='atomic-mass', placeholder='Enter Atomic Mass (if isotope)', type='number', size=70),
-                  daq.ToggleSwitch(id='composition-option', label='Atomic Percent/Weight Percent', value=False),
-                  dcc.Input(id='composition-percent', placeholder='Enter Composition Percent', type='number'),
-                  html.Button('Submit Element/Isotope', id='submit-isotope-button', n_clicks=0)
-                  ]),
+                html.Div([html.Label('Material Name'),
+                          dcc.Input(id='material-name', placeholder='Enter Material Name', type="text"),
+                          daq.NumericInput(
+                              id='material-density',
+                              min=0,
+                              value=10.1,
+                              label='Material Density',
+                              labelPosition='top'
+                          ),
+                          daq.NumericInput(
+                              id='material-temperature',
+                              min=0,
+                              value=250,
+                              label='Material Temperature',
+                              labelPosition='top'
+                          ),
+                          daq.Thermometer(
+                              min=0,
+                              max=1500,
+                              value=250,
+                              showCurrentValue=True,
+                              units="F"
+                          ),
+                          html.Button('Submit Material', id='submit-material-button', n_clicks=0),
+                          html.Br()
+                          ]),
+            ],
+                style=dict(
+                    display='table-cell',
+                    verticalAlign="top",
+                    width='50%'
+                ),
+            ),
 
-        html.Div(id='isotope-message-update'),
-        html.Div(style=dict(height=50)),
+            html.Div([
+                html.H4("Add a Composition Constituent"),
+                html.P("""
+                        Now that a material has been submitted, it is time to define its composition. You may make a 
+                        selection from the periodic table to define the element and then choose whether you would like 
+                        to make the composition entry based on atomic or weight %. If these fields are left blank, the 
+                        natural element will be selected from the periodic table with no alteration.
+                """),
+                # TODO: Add Snackbar here
+                html.Div([
+                    dcc.Input(id='atomic-mass', placeholder='Enter Atomic Mass (if isotope)', type='number', size=70),
+                    daq.ToggleSwitch(id='composition-option', label='Atomic Percent/Weight Percent', value=False),
+                    daq.NumericInput(
+                        id='composition-percent',
+                        min=0,
+                        value=0,
+                        label='Percent Composition',
+                        labelPosition='top',
+                        size=120
+                    ),
+                    html.Button('Submit Element/Isotope', id='submit-isotope-button', n_clicks=0)
+                ]),
 
-        html.Div(id='debug'),
+                html.Div(id='isotope-message-update'),
+                html.Div(style=dict(height=50)),
+            ],
+                style=dict(
+                    display='table-cell',
+                    verticalAlign="top",
+                    width='50%'
+                ),
+            ),
+        ],
+            style=dict(
+                width='100%',
+                display='table',
+            ),
+        ),
+
         dcc.Graph(id='material-display')
     ]),
 
@@ -209,6 +261,7 @@ layout = html.Div([
 
 
 # Populate Material Dropdown
+# TODO: Have dropdown populate from memory in order to add Density and temperature
 @app.callback(
     Output('material-dropdown', 'options'),
     [Input('submit-material-button', 'n_clicks')],
@@ -239,12 +292,11 @@ def choose_element(clickData):
     if clickData is not None:
         chosen_element = clickData['points'][0]['text'].split(':')[1].replace('<br>', ' ')
         element_mass = clickData['points'][0]['text'].split(':')[2]
-        message = '{} Atomic Mass {} has been selected'.format(chosen_element, element_mass)
+        message = '{}, {} has been selected'.format(chosen_element, element_mass)
     else:
         message = 'Please choose element from periodic table'
 
     return html.P(message)
-
 
 #######################################################################################################################
 
@@ -271,7 +323,7 @@ def submit_isotope(n_clicks, selected_material, clickData, mass, composition_opt
 
     if n_clicks > 0:
         mass = element_mass if mass is None else mass
-        composition_type = 'weight' if composition_option is True else 'atom'
+        composition_type = 'wo' if composition_option is True else 'ao'
 
         if selected_material is None:
             message = 'A material must be specified'
@@ -336,4 +388,3 @@ def tabulate_materials(timestamp, data):
     # https://plot.ly/python/figure-factory/table/
     table = ff.create_table(df)
     return table
-

@@ -51,6 +51,7 @@ layout = html.Div([
 
         html.Div([
             html.H6("List of Materials"),
+            # TODO: Callback to populate dropdown with existing materials
             dcc.Dropdown(id='material-dropdown', multi=True,
                          options=[{'label': 'Material1', 'value': 'Material1'},
                                   {'label': 'Material2', 'value': 'Material2'},
@@ -166,7 +167,6 @@ layout = html.Div([
         display='table',
     ),
     ),
-    # TODO: Link to CallBack
     dcc.Input(id='assembly-name'),
     html.Button('Store Assembly', id='store-assembly-btn', n_clicks=0),
     html.Div(style=dict(height=30)),

@@ -308,12 +308,47 @@ def write_material_xml_contents(write_click, contents):
 @app.callback(
     Output('memory-display', 'children'),
     [Input('xml-button', 'n_clicks')],
-    [State('material-stores', 'data')]
+    [State('material-stores', 'data'),
+
+     State('cell-stores', 'data'),
+     State('assembly-stores', 'data')]
 )
-def build_model(click, cell_data):
+def build_model(click, material_data, cell_data, assembly_data):
     if click:
+        model = openmc.model.Model()
+
+        print(material_data)
         print(cell_data)
-        return html.P('{}'.format(cell_data))
+        print(assembly_data)
+
+        materials = openmc.Materials([])
+        for material in material_data.keys():
+            mat_object = openmc.Material(name=material)
+            mat_object.set_density('g/cm3', 10.062)  # TODO
+            mat_object.temperature = 200             # TODO
+            mat_object.depletable = False
+
+            elements = material_data[material]['elements']
+            masses = material_data[material]['masses']
+            compositions = material_data[material]['compositions']
+            types = material_data[material]['types']
+
+            for i in range(len(elements)):
+                if float(masses[i]).is_integer():
+                    mat_object.add_element(element=elements[i],
+                                           percent=compositions[i],
+                                           percent_type=types[i],
+                                           enrichment=None)
+                else:
+                    mat_object.add_nuclide(nuclide=str(masses[i])+elements[i],
+                                           percent=compositions[i],
+                                           percent_type=types[i])
+
+            materials.append(mat_object)
+
+        model.materials = materials
+
+        return html.P('Success')
 
 #######################################################################################################################
 

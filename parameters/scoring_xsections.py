@@ -170,6 +170,10 @@ layout = html.Div([
             value=5,
             marks={i: i for i in range(0, 100, 5)},
         ),
+        dcc.RadioItems(id='scale-type', options=[
+            {'label': 'Linear', 'value': 'lin'},
+            {'label': 'Logarithmic', 'value': 'log'}
+        ]),
         html.Br(),
         html.Label('Select mesh to apply to cross-section calculations'),
         html.A(id='cross-section-message'),
