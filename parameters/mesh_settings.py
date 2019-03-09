@@ -32,7 +32,7 @@ layout = html.Div([
                    value=-3,
                    ),
         html.Br(),
-        html.A('Enter mesh x-resolution'),
+        html.Label('Mesh x-resolution'),
         dcc.Slider(id='mesh-x-slider',
                    min=1,
                    max=1000,
@@ -41,7 +41,7 @@ layout = html.Div([
                    marks={i: i for i in range(0, 1000, 100)},
                    ),
         html.Br(),
-        html.A('Enter mesh y-resolution'),
+        html.Label('Mesh y-resolution'),
         dcc.Slider(id='mesh-y-slider',
                    min=1,
                    max=1000,
@@ -50,7 +50,7 @@ layout = html.Div([
                    marks={i: i for i in range(0, 1000, 100)},
                    ),
         html.Br(),
-        html.A('Enter mesh z-resolution'),
+        html.Label('Mesh z-resolution'),
         dcc.Slider(id='mesh-z-slider',
                    min=1,
                    max=1000,
@@ -106,18 +106,18 @@ layout = html.Div([
             {'label': 'Multipole', 'value': 'multipole'},
         ]),
 
-        html.H4('Miscenallaneous'),
-        daq.BooleanSwitch(id='trigger-active', label='Trigger Active', labelPosition='right', on=False),
+        html.H4('Miscellaneous'),
+        daq.BooleanSwitch(id='trigger-active', label='Trigger Active', labelPosition='right'),
         # keff_trigger = dict
         # trigger_batch_interval = int
         # trigger_max_batches = int
 
-        daq.BooleanSwitch(id='no-reduce', label='No Reduce', labelPosition='right', on=True),
-        daq.BooleanSwitch(id='confidence-intervals', label='Confidence Intervals', labelPosition='right', on=True),
-        daq.BooleanSwitch(id='ptables', label='P-Tables', labelPosition='right', on=True),
-        daq.BooleanSwitch(id='run-cmfd', label='Run CMFD', labelPosition='right', on=True),
-        daq.BooleanSwitch(id='survival-biasing', label='Survival Biasing', labelPosition='right', on=True),
-        daq.BooleanSwitch(id='fission-neutrons', label='Create Fission Neutrons', labelPosition='right', on=True),
+        daq.BooleanSwitch(id='no-reduce', label='No Reduce', labelPosition='right'),
+        daq.BooleanSwitch(id='confidence-intervals', label='Confidence Intervals', labelPosition='right'),
+        daq.BooleanSwitch(id='ptables', label='P-Tables', labelPosition='right'),
+        daq.BooleanSwitch(id='run-cmfd', label='Run CMFD', labelPosition='right'),
+        daq.BooleanSwitch(id='survival-biasing', label='Survival Biasing', labelPosition='right'),
+        daq.BooleanSwitch(id='fission-neutrons', label='Create Fission Neutrons', labelPosition='right'),
         # ufs_mesh = openmc.Mesh
         # volume_calculations = iterable of VolumeCalculation
         # resonance_scattering = dict

@@ -177,7 +177,6 @@ layout = html.Div([
         html.Br(),
         html.Label('Select mesh to apply to cross-section calculations'),
         html.A(id='cross-section-message'),
-
     ]),
 ])
 
@@ -191,14 +190,16 @@ layout = html.Div([
     [State('basic-checklist', 'values'),
      State('performance-checklist', 'values'),
      State('nu-other-checklist', 'values'),
-     State('RR-checklist', 'values')]
+     State('RR-checklist', 'values'),
+     State('score-stores', 'data')]
 )
-def store_scores(click, scores1, scores2, scores3, scores4):
-    scores = []
+def store_scores(click, scores1, scores2, scores3, scores4, score_data):
+    score_data = score_data or {'scores': []}
     if click:
-        [scores.extend(score) for score in [scores1, scores2, scores3, scores4]]
-        print(scores)
-        return scores
+        [score_data['scores'].extend(score) for score in [scores1, scores2, scores3, scores4]]
+        print(score_data)
+
+    return score_data
 
 
 # TODO: import mesh into function

@@ -311,9 +311,10 @@ def write_material_xml_contents(write_click, contents):
     [State('material-stores', 'data'),
 
      State('cell-stores', 'data'),
-     State('assembly-stores', 'data')]
+     State('temp-assembly-stores', 'data'),
+     State('boundary-stores', 'data')]
 )
-def build_model(click, material_data, cell_data, assembly_data):
+def build_model(click, material_data, cell_data, assembly_data, boundary_data):
     if click:
         model = openmc.model.Model()
 
@@ -323,9 +324,12 @@ def build_model(click, material_data, cell_data, assembly_data):
 
         materials = openmc.Materials([])
         for material in material_data.keys():
+            density = material['density']
+            temperature = material['temperature']
+
             mat_object = openmc.Material(name=material)
-            mat_object.set_density('g/cm3', 10.062)  # TODO
-            mat_object.temperature = 200             # TODO
+            mat_object.set_density('g/cm3', density)
+            mat_object.temperature = temperature
             mat_object.depletable = False
 
             elements = material_data[material]['elements']
@@ -334,7 +338,7 @@ def build_model(click, material_data, cell_data, assembly_data):
             types = material_data[material]['types']
 
             for i in range(len(elements)):
-                if float(masses[i]).is_integer():
+                if float(masses[i]).is_integer() or masses[i] == 0:
                     mat_object.add_element(element=elements[i],
                                            percent=compositions[i],
                                            percent_type=types[i],

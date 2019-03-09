@@ -14,9 +14,11 @@ app.layout = html.Div([
     dcc.Store(id='color-stores', storage_type='session'),
     dcc.Store(id='cell-stores', storage_type='session'),
     dcc.Store(id='injection-stores', storage_type='session'),
-    dcc.Store(id='assembly-stores', storage_type='session'),
+    dcc.Store(id='temp-assembly-stores', storage_type='session'),
+    # dcc.Store(id='assembly-stores', storage_type='session'),
+    dcc.Store(id='boundary-stores', storage_type='session'),
     # Scores
-    # dcc.Store(id='score-stores', storage_type='session'),
+    dcc.Store(id='score-stores', storage_type='session'),
 
     dcc.Link('Materials', href='/parameters/material'), html.Br(),
     dcc.Link('Geometry', href='/parameters/geometry'), html.Br(),
@@ -38,11 +40,11 @@ def display_page(pathname):
     elif pathname == '/parameters/geometry':
         return geometry.layout
 
-    # elif pathname == '/parameters/mesh_settings':
-    #     return mesh_settings.layout
-    #
-    # elif pathname == '/parameters/scoring_xsections':
-    #     return scoring_xsections.layout
+    elif pathname == '/parameters/mesh_settings':
+        return mesh_settings.layout
+
+    elif pathname == '/parameters/scoring_xsections':
+        return scoring_xsections.layout
 
     elif pathname == '/parameters/runtime':
         return runtime.layout

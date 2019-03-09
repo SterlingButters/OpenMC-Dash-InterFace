@@ -350,32 +350,29 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
         print(message)
 
         material = material_data[selected_material]
+
+        try:
+            elements = material_data[selected_material]['elements']
+            masses = material_data[selected_material]['masses']
+            compositions = material_data[selected_material]['compositions']
+            types = material_data[selected_material]['types']
+        except:
+            elements = []
+            masses = []
+            compositions = []
+            types = []
+
+        elements.append(chosen_element)
+        masses.append(mass)
+        compositions.append(percent_composition)
+        types.append(composition_type)
+
         material.update(
-            {'elements': [],
-             'masses': [],
-             'compositions': [],
-             'types': []}
+            {'elements': elements,
+             'masses': masses,
+             'compositions': compositions,
+             'types': types}
             )
-
-        if len(material_data[selected_material]['elements']) > 0:
-            material_data[selected_material]['elements'].append(chosen_element)
-        else:
-            material_data[selected_material]['elements'] = [chosen_element]
-
-        if len(material_data[selected_material]['masses']) > 0:
-            material_data[selected_material]['masses'].append(mass)
-        else:
-            material_data[selected_material]['masses'] = [mass]
-
-        if len(material_data[selected_material]['compositions']) > 0:
-            material_data[selected_material]['compositions'].append(percent_composition)
-        else:
-            material_data[selected_material]['compositions'] = [percent_composition]
-
-        if len(material_data[selected_material]['types']) > 0:
-            material_data[selected_material]['types'].append(composition_type)
-        else:
-            material_data[selected_material]['types'] = [composition_type]
 
         return material_data
 
