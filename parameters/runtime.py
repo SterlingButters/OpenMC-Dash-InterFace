@@ -331,6 +331,9 @@ def build_model(click, material_data, cell_data, assembly_data, boundary_data, m
         model.materials = materials
 
         #######################################
+        # Geometry
+
+        #######################################
         # Mesh
 
         mesh = openmc.Mesh()
