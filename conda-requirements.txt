@@ -1,2 +1,2 @@
 python=3.6
-openmc
+openmc=0.10.0
