@@ -1,1 +1,1 @@
-openmc
+python=3.6
