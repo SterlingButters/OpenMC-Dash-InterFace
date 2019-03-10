@@ -1,3 +1,10 @@
 name: openmc-dash-interface
 dependencies:
+  - dash
+  - plotly
+  - dash-core-components
+  - dash-html-components
+  - dash-daq
   - numpy
+  - pandas
+  - gunicorn
