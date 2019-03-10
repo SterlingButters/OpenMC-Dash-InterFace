@@ -16,7 +16,7 @@ It is unlikely that I will be able to create support for every feature of OpenMC
 merely get a UI working for your average joe or NUEN B.S. college student, then maybe add support where requests 
 are made. 
 
-### TODO List
+### Current release TODO List
 ##### Geometry:
 - Reset Cell Indices once Injected
 - Set Geometrical Boundaries based on other geometry
@@ -24,8 +24,8 @@ are made.
 ##### Cross-Sections:
 ##### Tallies & Settings:
 
-#### TODO's:
-- Make boundaries dependent on root region
+### Next Release Features
+- Full Core Model
 
 #### Unnecessary Beautification Features
 - Tweak Material Table
@@ -33,6 +33,7 @@ are made.
 - 3D Rendering of Geometry
 - Graph Cell(s)/Assembly(ies) from Memory
 - Add Snackbars to Alert User that options have been added to dropdowns
+- Other Styling
 
-
-
+#### Questionable Features
+- Removal of items from memory
