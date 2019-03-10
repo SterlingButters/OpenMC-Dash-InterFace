@@ -4,8 +4,6 @@ channels:
 dependencies:
 - python=3.6
 - anaconda
-- anaconda-client
-- conda
 - openmc
 - pip
 - pip:
