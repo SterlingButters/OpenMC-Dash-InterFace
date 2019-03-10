@@ -1,5 +1,9 @@
 name: openmc-dash-interface
 dependencies:
+- python>=3.5
+- anaconda
+- pip
+- pip:
   - dash
   - plotly
   - dash-core-components
