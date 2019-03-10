@@ -163,9 +163,6 @@ layout = html.Div([
                   figure=periodic_table
                   ),
         html.Div(id='chosen-element'),
-        html.H3("List of Materials"),
-        dcc.Dropdown(id='material-dropdown'),
-
         html.Div([
             html.Div([
                 html.H4("Add a Material"),
@@ -182,23 +179,28 @@ layout = html.Div([
                           daq.NumericInput(
                               id='material-density',
                               min=0,
+                              max=25,
                               value=10.1,
                               label='Material Density',
-                              labelPosition='top'
+                              labelPosition='top',
+                              size=120
                           ),
                           daq.NumericInput(
                               id='material-temperature',
                               min=0,
+                              max=4000,
                               value=250,
                               label='Material Temperature',
-                              labelPosition='top'
+                              labelPosition='top',
+                              size=120
                           ),
                           daq.Thermometer(
                               min=0,
-                              max=1500,
+                              max=4000,
                               value=250,
                               showCurrentValue=True,
-                              units="F"
+                              units="F",
+                              size=100
                           ),
                           html.Button('Submit Material', id='submit-material-button', n_clicks_timestamp=0),
                           html.Br()
@@ -219,7 +221,8 @@ layout = html.Div([
                         to make the composition entry based on atomic or weight %. If these fields are left blank, the 
                         natural element will be selected from the periodic table with no alteration.
                 """),
-                # TODO: Add Snackbar here
+                html.H5("List of Materials"),
+                dcc.Dropdown(id='material-dropdown'),
                 html.Div([
                     dcc.Input(id='atomic-mass', placeholder='Enter Atomic Mass (if isotope)', type='number', size=70),
                     daq.ToggleSwitch(id='composition-option', label='Atomic Percent/Weight Percent', value=False),
@@ -313,7 +316,6 @@ def choose_element(clickData):
 )
 def submit_isotope(mat_click, iso_click, material_name, material_density, material_temperature, selected_material,
                    clickData, mass, composition_option, percent_composition, material_data):
-
     material_data = material_data or {}
 
     if mat_click > iso_click:
@@ -371,7 +373,7 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
              'masses': masses,
              'compositions': compositions,
              'types': types}
-            )
+        )
 
         return material_data
 

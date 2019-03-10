@@ -19,7 +19,7 @@ from app import app
 layout = html.Div([
 
     # Title
-    html.H2('Scoring/Runtime Configuration',
+    html.H2('Runtime Verification & Model Generation',
             style={
                 'position': 'relative',
                 'top': '0px',
@@ -29,40 +29,6 @@ layout = html.Div([
                 'font-size': '4.0rem',
                 'color': '#4D637F'
             }), html.Br(),
-    html.Div([
-        html.Label('Total/Inactive Batches for Simulation'),
-        dcc.RangeSlider(
-            id='total-inactive-batches',
-            min=0,
-            max=100,
-            value=[5, 10],
-            marks={i: i for i in range(0, 100, 5)},
-            included=False,
-            pushable=5),
-
-        html.Br(),
-        html.Label('Number of Generations per Batch in Simulation'),
-        dcc.Slider(
-            id='generations-per-batch',
-            min=0,
-            max=100,
-            step=1,
-            value=10,
-            marks={i: i for i in range(0, 100, 5)}
-        ),
-        html.Br(),
-        html.Label('Number of Particles in Simulation'),
-        dcc.Slider(
-            id='particles-input',
-            min=0,
-            max=10000,
-            step=1,
-            value=500,
-            marks={i: i for i in range(0, 10000, 500)}
-        ),
-        html.A(id='settings-message'),
-        html.Br(),
-    ]),
 
     #############################################################################
     # Loading/Writing XML Files
@@ -312,12 +278,14 @@ def write_material_xml_contents(write_click, contents):
     [State('material-stores', 'data'),
 
      State('cell-stores', 'data'),
-     State('temp-assembly-stores', 'data'),  # TODO: Change to all_data
+     State('assembly-stores', 'data'),
      State('boundary-stores', 'data'),
 
-     State('score-stores', 'data')]
+     State('mesh-stores', 'data'),
+
+     State('mesh-score-stores', 'data')]
 )
-def build_model(click, material_data, cell_data, assembly_data, boundary_data, score_data):
+def build_model(click, material_data, cell_data, assembly_data, boundary_data, mesh_data, score_data):
     if click:
         model = openmc.model.Model()
 
@@ -331,6 +299,7 @@ def build_model(click, material_data, cell_data, assembly_data, boundary_data, s
 
         #######################################
         # Materials
+
         materials = openmc.Materials([])
         for material in material_data.keys():
             density = material_data[material]['density']
@@ -364,6 +333,21 @@ def build_model(click, material_data, cell_data, assembly_data, boundary_data, s
         #######################################
         # Mesh
 
+        mesh = openmc.Mesh()
+        mesh.type = 'regular'
+        dim_x = mesh_data['x-resolution']
+        dim_y = mesh_data['y-resolution']
+        dim_z = mesh_data['z-resolution']
+        width = mesh_data['width']
+        depth = mesh_data['depth']
+        height = mesh_data['height']
+        mesh.dimension = [dim_x, dim_y, dim_z]
+        mesh.lower_left = [-width / 2, -depth / 2, -height / 2]
+        mesh.width = [width / dim_x, depth / dim_y, height / dim_z]
+
+        # Create a mesh filter
+        mesh_filter = openmc.MeshFilter(mesh)
+
         #######################################
         # Cross-sections
 
@@ -375,7 +359,7 @@ def build_model(click, material_data, cell_data, assembly_data, boundary_data, s
 
         # Instantiate a flux tally; Other valid options: 'current', 'fission', etc
         mesh_tally = openmc.Tally(name='Mesh')
-        # flux_tally.filters = [mesh_filter]
+        mesh_tally.filters = [mesh_filter]
         mesh_tally.scores = score_data['scores']
 
         energy_tally = openmc.Tally(name='Energy')

@@ -749,21 +749,20 @@ def fill_assembly(data, assembly_data):
         return dcc.Graph(id='assembly-graph', figure=figure)
 
 
-# TODO: Support multiple assemblies to create universe dropdown
-# @app.callback(
-#     Output('assembly-stores', 'data'),
-#     [Input('store-assembly-btn', 'n_clicks')],
-#     [State('assembly-name', 'value'),
-#      State('temp-assembly-stores', 'data'),
-#      State('assembly-stores', 'data')]
-# )
-# def store_to_assemblies(click, assembly_name, assembly_data, all_assembly_data):
-#     all_assembly_data = all_assembly_data or {}
-#
-#     if click:
-#         all_assembly_data.update({'{}'.format(assembly_name):
-#                                       {}
-#                                   })
+@app.callback(
+    Output('assembly-stores', 'data'),
+    [Input('store-assembly-btn', 'n_clicks')],
+    [State('assembly-name', 'value'),
+     State('temp-assembly-stores', 'data'),
+     State('assembly-stores', 'data')]
+)
+def store_to_assemblies(click, assembly_name, assembly_data, all_assembly_data):
+    all_assembly_data = all_assembly_data or {}
+
+    if click:
+        all_assembly_data.update({'{}'.format(assembly_name): assembly_data})
+
+    return all_assembly_data
 
 #######################################################################################################################
 # Full-Core

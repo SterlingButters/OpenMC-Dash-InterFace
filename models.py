@@ -811,14 +811,13 @@ def flux_spectrum(statepoint_file, desired_score=''):
     energies = energy_filter.bins
     energies = np.delete(energies, [0, 1])
 
-
-    # TODO: Make energy filter with no mesh filter
     print(len(energies))
     print(energies)
     print(len(fluxes))
     print(fluxes)
 
     return energies, fluxes
+
 
 # https://openmc.readthedocs.io/en/stable/io_formats/statepoint.html#io-statepoint
 def statepoint_evaluation(statepoint_file, desired_score=''):
