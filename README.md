@@ -2,7 +2,6 @@
 Status: This project has several things that still need to be implemented but progress is coming along nicely and now 
 that a basic framework has been set up, additions are become easier to implement.  
 
-![alt text](outputs/Demo.png)
 ![alt text](outputs/Score.png)
 
 ## Summary
