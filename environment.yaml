@@ -1,7 +1,10 @@
 name: openmc-dash-interface
+channels:
+    - conda-forge
 dependencies:
-- python>=3.5
+- python=3.6
 - anaconda
+- openmc
 - pip
 - pip:
   - dash
