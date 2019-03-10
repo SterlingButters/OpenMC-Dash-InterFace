@@ -163,9 +163,6 @@ layout = html.Div([
                   figure=periodic_table
                   ),
         html.Div(id='chosen-element'),
-        html.H3("List of Materials"),
-        dcc.Dropdown(id='material-dropdown'),
-
         html.Div([
             html.Div([
                 html.H4("Add a Material"),
@@ -182,25 +179,30 @@ layout = html.Div([
                           daq.NumericInput(
                               id='material-density',
                               min=0,
+                              max=25,
                               value=10.1,
                               label='Material Density',
-                              labelPosition='top'
+                              labelPosition='top',
+                              size=120
                           ),
                           daq.NumericInput(
                               id='material-temperature',
                               min=0,
+                              max=4000,
                               value=250,
                               label='Material Temperature',
-                              labelPosition='top'
+                              labelPosition='top',
+                              size=120
                           ),
                           daq.Thermometer(
                               min=0,
-                              max=1500,
+                              max=4000,
                               value=250,
                               showCurrentValue=True,
-                              units="F"
+                              units="F",
+                              size=100
                           ),
-                          html.Button('Submit Material', id='submit-material-button', n_clicks=0),
+                          html.Button('Submit Material', id='submit-material-button', n_clicks_timestamp=0),
                           html.Br()
                           ]),
             ],
@@ -219,7 +221,8 @@ layout = html.Div([
                         to make the composition entry based on atomic or weight %. If these fields are left blank, the 
                         natural element will be selected from the periodic table with no alteration.
                 """),
-                # TODO: Add Snackbar here
+                html.H5("List of Materials"),
+                dcc.Dropdown(id='material-dropdown'),
                 html.Div([
                     dcc.Input(id='atomic-mass', placeholder='Enter Atomic Mass (if isotope)', type='number', size=70),
                     daq.ToggleSwitch(id='composition-option', label='Atomic Percent/Weight Percent', value=False),
@@ -231,7 +234,7 @@ layout = html.Div([
                         labelPosition='top',
                         size=120
                     ),
-                    html.Button('Submit Element/Isotope', id='submit-isotope-button', n_clicks=0)
+                    html.Button('Submit Element/Isotope', id='submit-isotope-button', n_clicks_timestamp=0)
                 ]),
 
                 html.Div(id='isotope-message-update'),
@@ -261,23 +264,15 @@ layout = html.Div([
 
 
 # Populate Material Dropdown
-# TODO: Have dropdown populate from memory in order to add Density and temperature
 @app.callback(
     Output('material-dropdown', 'options'),
-    [Input('submit-material-button', 'n_clicks')],
-    [State('material-name', 'value'),
-     State('material-density', 'value'),
-     State('material-temperature', 'value'),
-     State('material-dropdown', 'options')])
-def submit_material(n_clicks, material_name, material_density, material_temperature, material_options):
-    material_options = material_options or []
-    if n_clicks > 0:
-        if None in [material_name, material_density, material_temperature]:
-            print(material_name, material_density, material_temperature)
-            print("A Material Parameter remains Unfilled")
-        elif material_name in [material_options[m]['value'] for m in range(len(material_options))]:
-            print("A Material with that name already exists")
-        else:
+    [Input('material-stores', 'data')],
+)
+def submit_material(material_data):
+    material_options = []
+
+    if material_data:
+        for material_name in material_data.keys():
             material_options.append({'label': material_name, 'value': material_name})
 
     return material_options
@@ -298,30 +293,48 @@ def choose_element(clickData):
 
     return html.P(message)
 
+
 #######################################################################################################################
 
 
 # Submit material, element/isotope into memory
 @app.callback(
     Output('material-stores', 'data'),
-    [Input('submit-isotope-button', 'n_clicks')],
-    [State('material-dropdown', 'value'),
+    [Input('submit-material-button', 'n_clicks_timestamp'),
+     Input('submit-isotope-button', 'n_clicks_timestamp')],
+
+    [State('material-name', 'value'),
+     State('material-density', 'value'),
+     State('material-temperature', 'value'),
+
+     State('material-dropdown', 'value'),
      State('periodic-table', 'clickData'),
      State('atomic-mass', 'value'),
      State('composition-option', 'value'),
      State('composition-percent', 'value'),
-     State('material-dropdown', 'options'),
      State('material-stores', 'data')]
 )
-def submit_isotope(n_clicks, selected_material, clickData, mass, composition_option, percent_composition,
-                   material_options, data):
-    if n_clicks is None:
-        raise PreventUpdate
+def submit_isotope(mat_click, iso_click, material_name, material_density, material_temperature, selected_material,
+                   clickData, mass, composition_option, percent_composition, material_data):
+    material_data = material_data or {}
 
-    chosen_element = clickData['points'][0]['text'].split(':')[0] if clickData else None
-    element_mass = float(clickData['points'][0]['text'].split(':')[2]) if clickData else None
+    if mat_click > iso_click:
+        if None in [material_name, material_density, material_temperature]:
+            print(material_name, material_density, material_temperature)
+            print("A Material Parameter remains Unfilled")
+        else:
+            material_data.update({'{}'.format(material_name):
+                                      {'density': material_density,
+                                       'temperature': material_temperature}
+                                  })
 
-    if n_clicks > 0:
+        return material_data
+
+    if iso_click > mat_click:
+
+        chosen_element = clickData['points'][0]['text'].split(':')[0] if clickData else None
+        element_mass = float(clickData['points'][0]['text'].split(':')[2]) if clickData else None
+
         mass = element_mass if mass is None else mass
         composition_type = 'wo' if composition_option is True else 'ao'
 
@@ -335,42 +348,34 @@ def submit_isotope(n_clicks, selected_material, clickData, mass, composition_opt
                                                                       selected_material,
                                                                       percent_composition,
                                                                       composition_type)
-
         print(message)
 
-        MATERIALS = data or {}
+        material = material_data[selected_material]
 
-        for m in range(len(material_options)):
-            if material_options[m]['value'] not in MATERIALS.keys():
-                material = material_options[m]['value']
-                MATERIALS.update({'{}'.format(material): {
-                    'elements': [],
-                    'masses': [],
-                    'compositions': [],
-                    'types': []}
-                })
+        try:
+            elements = material_data[selected_material]['elements']
+            masses = material_data[selected_material]['masses']
+            compositions = material_data[selected_material]['compositions']
+            types = material_data[selected_material]['types']
+        except:
+            elements = []
+            masses = []
+            compositions = []
+            types = []
 
-        if len(MATERIALS[selected_material]['elements']) > 0:
-            MATERIALS[selected_material]['elements'].append(chosen_element)
-        else:
-            MATERIALS[selected_material]['elements'] = [chosen_element]
+        elements.append(chosen_element)
+        masses.append(mass)
+        compositions.append(percent_composition)
+        types.append(composition_type)
 
-        if len(MATERIALS[selected_material]['masses']) > 0:
-            MATERIALS[selected_material]['masses'].append(mass)
-        else:
-            MATERIALS[selected_material]['masses'] = [mass]
+        material.update(
+            {'elements': elements,
+             'masses': masses,
+             'compositions': compositions,
+             'types': types}
+        )
 
-        if len(MATERIALS[selected_material]['compositions']) > 0:
-            MATERIALS[selected_material]['compositions'].append(percent_composition)
-        else:
-            MATERIALS[selected_material]['compositions'] = [percent_composition]
-
-        if len(MATERIALS[selected_material]['types']) > 0:
-            MATERIALS[selected_material]['types'].append(composition_type)
-        else:
-            MATERIALS[selected_material]['types'] = [composition_type]
-
-        return MATERIALS
+        return material_data
 
 
 # Populate Table from Memory - Must be able to recall material data from memory

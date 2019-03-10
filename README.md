@@ -5,7 +5,6 @@ that a basic framework has been set up, additions are become easier to implement
 ![alt text](outputs/Demo.png)
 ![alt text](outputs/Score.png)
 
-
 ## Summary
 I've decided to attempt to replicate (more or less) ERSN for OpenMC (Open Source Monte Carlo Neutron Transport Code) 
 but using Dash. This project will create a GUI for setting up OpenMC simulations, running them, and depicting the results. 
@@ -19,23 +18,22 @@ merely get a UI working for your average joe or NUEN B.S. college student, then 
 are made. 
 
 ### TODO List
-##### Materials:
 ##### Geometry:
-- Set whole geometry boundary boundaries/min/max based on geometry dimensions
+- Reset Cell Indices once Injected
+- Set Geometrical Boundaries based on other geometry
 ##### Mesh:
-- Finish Layout
-- Create Callbacks
 ##### Cross-Sections:
-- Finish Layout
-    - energy/delayed groups specification 
-    - Mesh specification
-    - Cross-Section type dropdown
 ##### Tallies & Settings:
-- Finish Layout
-- Create Callbacks
 
 #### TODO's:
 - Make boundaries dependent on root region
-- ~~Create cross-section graphs for radionuclides~~
-- Add 3D rendering of geometry
+
+#### Unnecessary Beautification Features
+- Tweak Material Table
+- Create Cross-Section Plots
+- 3D Rendering of Geometry
+- Graph Cell(s)/Assembly(ies) from Memory
+- Add Snackbars to Alert User that options have been added to dropdowns
+
+
 

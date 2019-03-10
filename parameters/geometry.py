@@ -1,12 +1,10 @@
 import dash_core_components as dcc
-import dash_html_components as html
-from dash.dependencies import Output, State, Input
 import dash_daq as daq
-from dash.exceptions import PreventUpdate
-
-import plotly.graph_objs as go
-
+import dash_html_components as html
 import numpy as np
+import plotly.graph_objs as go
+from dash.dependencies import Output, State, Input
+from dash.exceptions import PreventUpdate
 
 from app import app
 
@@ -51,7 +49,7 @@ layout = html.Div([
 
         html.Div([
             html.H6("List of Materials"),
-            # TODO: Callback to populate dropdown with existing materials
+            # TODO: Remove these options once app is complete
             dcc.Dropdown(id='material-dropdown', multi=True,
                          options=[{'label': 'Material1', 'value': 'Material1'},
                                   {'label': 'Material2', 'value': 'Material2'},
@@ -136,7 +134,7 @@ layout = html.Div([
                 only the selected cells.
             """),
             dcc.Dropdown(id='injection-cell'),
-            html.P("Selected Cells: "), html.Div(id='test'),
+            html.P("Selected Cells: "), html.Div(id='display-selected'),
             html.Button('Submit cell into selection(s)', id='submit-selected-btn'),
             # TODO: Link to Callback
             html.Div(id='cell-preview'),
@@ -167,7 +165,7 @@ layout = html.Div([
         display='table',
     ),
     ),
-    dcc.Input(id='assembly-name'),
+    dcc.Input(id='assembly-name', placeholder='Enter Assembly Name', size=70, type='text'),
     html.Button('Store Assembly', id='store-assembly-btn', n_clicks=0),
     html.Div(style=dict(height=30)),
 
@@ -535,7 +533,7 @@ def populate_dropdown(timestamp, main_cell, data):
 
 
 @app.callback(
-    Output('test', 'children'),
+    Output('display-selected', 'children'),
     [Input('injection-stores', 'modified_timestamp')],
     [State('injection-stores', 'data')]
 )
@@ -567,9 +565,8 @@ def print_selected_cells(clickData, data):
     return {'selected-cells': selected_cells}
 
 
-# TODO: Merge next 2 callbacks so that assembly is graphed from memory only
 @app.callback(
-    Output('assembly-stores', 'data'),
+    Output('temp-assembly-stores', 'data'),
     [Input('submit-selected-btn', 'n_clicks'),
      Input('cell-dropdown', 'value'),
      Input('assembly-x-dimension', 'value'),
@@ -578,9 +575,10 @@ def print_selected_cells(clickData, data):
      Input('assembly-y-number', 'value')],
     [State('injection-cell', 'value'),
      State('injection-stores', 'data'),
-     State('assembly-stores', 'data')]
+     State('temp-assembly-stores', 'data')]
 )
-def configure_stores(clicks, main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, selected_cell, selection_locs, data):
+def configure_stores(clicks, main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, selected_cell,
+                     selection_locs, data):
     data = data or {'main-cell': {}, 'injected-cells': {}, 'assembly-metrics': {}}
     cells = data['injected-cells']
 
@@ -616,7 +614,7 @@ def configure_stores(clicks, main_cell, assembly_dim_x, assembly_dim_y, assembly
 @app.callback(
     Output('assembly-container', 'children'),
     [Input('cell-stores', 'data'),
-     Input('assembly-stores', 'data')],
+     Input('temp-assembly-stores', 'data')],
 )
 def fill_assembly(data, assembly_data):
     main_cell = assembly_data['main-cell']
@@ -644,7 +642,8 @@ def fill_assembly(data, assembly_data):
 
                 if assembly_data:
                     # If index is not specified in any of cell indices
-                    if [b, a] not in [result for cell_name in assembly_data['injected-cells'].keys() for result in assembly_data['injected-cells'][cell_name]['indices']]:
+                    if [b, a] not in [result for cell_name in assembly_data['injected-cells'].keys() for result in
+                                      assembly_data['injected-cells'][cell_name]['indices']]:
 
                         planes = data[main_cell]['radii']
                         planes = planes[::-1]
@@ -750,32 +749,52 @@ def fill_assembly(data, assembly_data):
         return dcc.Graph(id='assembly-graph', figure=figure)
 
 
+@app.callback(
+    Output('assembly-stores', 'data'),
+    [Input('store-assembly-btn', 'n_clicks')],
+    [State('assembly-name', 'value'),
+     State('temp-assembly-stores', 'data'),
+     State('assembly-stores', 'data')]
+)
+def store_to_assemblies(click, assembly_name, assembly_data, all_assembly_data):
+    all_assembly_data = all_assembly_data or {}
+
+    if click:
+        all_assembly_data.update({'{}'.format(assembly_name): assembly_data})
+
+    return all_assembly_data
+
+#######################################################################################################################
+# Full-Core
+# TODO
+
+
 #######################################################################################################################
 # Boundaries
 
 # Store whole-geometry outer boundary and type
-# @app.callback(
-#     Output('geometry-stores2', 'data'),
-#     [Input('submit-boundaries-btn', 'n_clicks')],
-#     [State('boundary-range-x', 'value'),
-#      State('boundary-range-y', 'value'),
-#      State('boundary-range-z', 'value'),
-#      State('boundary-type-x', 'value'),
-#      State('boundary-type-y', 'value'),
-#      State('boundary-type-z', 'value'),
-#      State('geometry-stores2', 'data')])
-# def set_boundaries(clicks, range_x, range_y, range_z, btype_x, btype_y, btype_z, data):
-#     if clicks is None:
-#         raise PreventUpdate
-#
-#     min_x = range_x[0]
-#     max_x = range_x[1]
-#     min_y = range_y[0]
-#     max_y = range_y[1]
-#     min_z = range_z[0]
-#     max_z = range_z[1]
-#
-#     return {'X-min': min_x, 'X-max': max_x, 'X-btype': btype_x,
-#             'Y-min': min_y, 'Y-max': max_y, 'Y-btype': btype_y,
-#             'Z-min': min_z, 'Z-max': max_z, 'Z-btype': btype_y}
+@app.callback(
+    Output('boundary-stores', 'data'),
+    [Input('submit-boundaries-btn', 'n_clicks')],
+    [State('boundary-range-x', 'value'),
+     State('boundary-range-y', 'value'),
+     State('boundary-range-z', 'value'),
+     State('boundary-type-x', 'value'),
+     State('boundary-type-y', 'value'),
+     State('boundary-type-z', 'value'),
+     State('boundary-stores', 'data')])
+def set_boundaries(clicks, range_x, range_y, range_z, btype_x, btype_y, btype_z, boundary_data):
+    boundary_data = boundary_data or {}
+    if clicks:
+        min_x = range_x[0]
+        max_x = range_x[1]
+        min_y = range_y[0]
+        max_y = range_y[1]
+        min_z = range_z[0]
+        max_z = range_z[1]
 
+        boundary_data.update({'X-min': min_x, 'X-max': max_x, 'X-btype': btype_x,
+                              'Y-min': min_y, 'Y-max': max_y, 'Y-btype': btype_y,
+                              'Z-min': min_z, 'Z-max': max_z, 'Z-btype': btype_z})
+
+    return boundary_data
