@@ -5,4 +5,5 @@ dash-html-components
 dash-daq
 numpy
 pandas
+matplotlib
 gunicorn

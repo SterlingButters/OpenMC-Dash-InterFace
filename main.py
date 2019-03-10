@@ -1,6 +1,8 @@
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
+import matplotlib
+matplotlib.use("Agg")
 
 from app import app
 from parameters import material, geometry, settings, mesh_tallies_xsections, runtime, postprocessing
