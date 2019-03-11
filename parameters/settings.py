@@ -25,11 +25,11 @@ layout = html.Div([
     # https://openmc.readthedocs.io/en/stable/pythonapi/generated/openmc.Settings.html#openmc.Settings
     html.H2('Run Settings'),
 
-    html.Label('Total Batches'), dcc.Input(id='total-batches', type='number'),
-    html.Label('Inactive Batches'), dcc.Input(id='inactive-batches', type='number'),
-    html.Label('Particles'), dcc.Input(id='particles', type='number'),
-    html.Label('Generations per Batch'), dcc.Input(id='gens-per-batch', type='number'),
-    html.Label('Seed'), dcc.Input(id='seed', type='number'),
+    html.Label('Total Batches'), dcc.Input(id='total-batches', value=100, type='number'),
+    html.Label('Inactive Batches'), dcc.Input(id='inactive-batches', value=20, type='number'),
+    html.Label('Particles'), dcc.Input(id='particles', value=1000, type='number'),
+    html.Label('Generations per Batch'), dcc.Input(id='gens-per-batch', value=10, type='number'),
+    html.Label('Seed'), dcc.Input(id='seed', value=1, type='number'),
 
     html.H4('Run Mode'),
     dcc.Dropdown(id='run-mode', options=[

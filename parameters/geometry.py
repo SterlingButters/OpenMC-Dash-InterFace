@@ -38,7 +38,23 @@ layout = html.Div([
             html.H6("List of Planes"),
             dcc.Input(id='planes-list', value='.45, .4',
                       placeholder='Enter list of radial planes (comma separated)',
-                      type="text", style=dict(height=36)),
+                      type="text", style=dict(height=36)), html.Br(),
+            daq.NumericInput(id='cell-pitch-x',
+                             min=0,
+                             max=5,
+                             value=1.26,
+                             label='Cell Pitch',
+                             labelPosition='top',
+                             size=200
+                             ),
+            daq.NumericInput(id='cell-pitch-y',
+                             min=0,
+                             max=5,
+                             value=1.26,
+                             label='Cell Pitch',
+                             labelPosition='top',
+                             size=200
+                             )
         ],
             style=dict(
                 display='table-cell',
@@ -117,12 +133,6 @@ layout = html.Div([
                 The dropdown below will fill the entire assembly with cells of that type.
                    """),
             dcc.Dropdown(id='cell-dropdown'),
-            html.P("X-width Dimension [units]"),
-            dcc.Input(id='assembly-x-dimension', placeholder='Enter assembly x-width dimension',
-                      type='number', value=15),
-            html.P("Y-width Dimension [units]"),
-            dcc.Input(id='assembly-y-dimension', placeholder='Enter assembly y-width dimension',
-                      type='number', value=15),
             html.P("X-pins [#]"),
             dcc.Input(id='assembly-x-number', placeholder='Enter fuel pins in x-dimension',
                       type='number', value=15),
@@ -176,21 +186,18 @@ layout = html.Div([
         usually be contained within this defined volume thus the boundaries defined here 
         will larger than any of those previous.
            """),
-    html.P('Pick root geometry from Dropdown'),
-    dcc.Dropdown(id='root-cell-option'),
-
     html.Div([
         html.Div([
             html.H6("X Boundaries"),
             html.Br(),
             dcc.RangeSlider(id='boundary-range-x',
-                            min=-1000,
-                            max=1000,
-                            value=[-100, 100],
+                            min=-100,
+                            max=100,
+                            value=[-10, 10],
                             marks={
-                                -1000: {'label': '-1000', 'style': {'color': '#77b0b1'}},
+                                -100: {'label': '-100', 'style': {'color': '#77b0b1'}},
                                 0: {'label': '0', 'style': {'color': '#f50'}},
-                                1000: {'label': '1000', 'style': {'color': '#f50'}}
+                                100: {'label': '100', 'style': {'color': '#f50'}}
                             },
                             allowCross=False,
                             pushable=True),
@@ -218,13 +225,13 @@ layout = html.Div([
             html.H6("Y Boundaries"),
             html.Br(),
             dcc.RangeSlider(id='boundary-range-y',
-                            min=-1000,
-                            max=1000,
-                            value=[-100, 100],
+                            min=-100,
+                            max=100,
+                            value=[-10, 10],
                             marks={
-                                -1000: {'label': '-1000', 'style': {'color': '#77b0b1'}},
+                                -100: {'label': '-100', 'style': {'color': '#77b0b1'}},
                                 0: {'label': '0', 'style': {'color': '#f50'}},
-                                1000: {'label': '1000', 'style': {'color': '#f50'}}
+                                100: {'label': '100', 'style': {'color': '#f50'}}
                             },
                             allowCross=False,
                             pushable=True,
@@ -253,13 +260,13 @@ layout = html.Div([
             html.H6("Z Boundaries"),
             html.Br(),
             dcc.RangeSlider(id='boundary-range-z',
-                            min=-1000,
-                            max=1000,
-                            value=[-100, 100],
+                            min=-100,
+                            max=100,
+                            value=[-10, 10],
                             marks={
-                                -1000: {'label': '-1000', 'style': {'color': '#77b0b1'}},
+                                -100: {'label': '-100', 'style': {'color': '#77b0b1'}},
                                 0: {'label': '0', 'style': {'color': '#f50'}},
-                                1000: {'label': '1000', 'style': {'color': '#f50'}}
+                                100: {'label': '100', 'style': {'color': '#f50'}}
                             },
                             allowCross=False,
                             pushable=True,
@@ -454,44 +461,49 @@ def create_cell(planes, materials, colors):
     [Input('store-cell-button', 'n_clicks')],
     [State('cell-name', 'value'),
      State('planes-list', 'value'),
+     State('cell-pitch-x', 'value'),
+     State('cell-pitch-y', 'value'),
      State('material-dropdown', 'value'),
      State('colors-dropdown', 'value'),
      State('cell-stores', 'data')]
 )
-def store_cell(clicks, name, planes, materials, colors, data):
+def store_cell(clicks, name, planes, x_pitch, y_pitch, materials, colors, data):
     if clicks is None:
         raise PreventUpdate
+
+    data = data or {}
 
     planes = [float(plane) for plane in planes.split(',')]
     planes.sort()
 
-    data = data or {}
-    data.update({'{}'.format(name): {'radii': planes,
-                                     'materials': materials,
-                                     'colors': colors}})
+    if name is None:
+        print("Must enter a cell name")
 
-    return data
+    elif planes is None:
+        print("Must have at least one plane")
+
+    elif x_pitch is None or y_pitch is None:
+        print("Must enter a cell pitch")
+
+    elif materials is None:
+        print("Must have at least one material")
+
+    elif len(materials) != len(planes) + 1:
+        print("Material/Radial Planes requirement mismatch")
+
+    else:
+        data.update({'{}'.format(name): {'x-pitch': x_pitch,
+                                         'y-pitch': y_pitch,
+                                         'radii': planes,
+                                         'materials': materials,
+                                         'colors': colors}})
+
+        print(data)
+        return data
 
 
-# Disable Button to commit cell to memory if missing Information
-# @app.callback(
-#     Output('store-cell-button', 'disabled'),
-#     [Input('cell-name', 'value'),
-#      Input('planes-list', 'value'),
-#      Input('material-dropdown', 'value')]
-# )
-# def disable_button(name, planes, materials):
-#     if planes is None:
-#         print("Must have at least one plane")
-#     else:
-#         planes = [float(plane) for plane in planes.split(',')]
-#         planes.sort()
-#
-#     if len(planes) > 0 and materials is not None and len(materials) == len(planes) + 1 and name is not None:
-#         return False
-#     else:
-#         return True
-
+#######################################################################################################################
+# Assemblies
 
 @app.callback(
     Output('cell-dropdown', 'options'),
@@ -526,10 +538,6 @@ def populate_dropdown(timestamp, main_cell, data):
             options.remove({'label': main_cell, 'value': main_cell})
 
         return options
-
-
-#######################################################################################################################
-# Assemblies
 
 
 @app.callback(
@@ -569,27 +577,26 @@ def print_selected_cells(clickData, data):
     Output('temp-assembly-stores', 'data'),
     [Input('submit-selected-btn', 'n_clicks'),
      Input('cell-dropdown', 'value'),
-     Input('assembly-x-dimension', 'value'),
-     Input('assembly-y-dimension', 'value'),
      Input('assembly-x-number', 'value'),
      Input('assembly-y-number', 'value')],
     [State('injection-cell', 'value'),
      State('injection-stores', 'data'),
+     State('cell-stores', 'data'),
      State('temp-assembly-stores', 'data')]
 )
-def configure_stores(clicks, main_cell, assembly_dim_x, assembly_dim_y, assembly_num_x, assembly_num_y, selected_cell,
-                     selection_locs, data):
+def configure_stores(clicks, main_cell, assembly_num_x, assembly_num_y, selected_cell,
+                     selection_locs, cell_data, data):
     data = data or {'main-cell': {}, 'injected-cells': {}, 'assembly-metrics': {}}
     cells = data['injected-cells']
 
-    data['main-cell'] = main_cell
-    data['assembly-metrics']['assembly-dim-x'] = assembly_dim_x
-    data['assembly-metrics']['assembly-dim-y'] = assembly_dim_y
-    data['assembly-metrics']['assembly-num-x'] = assembly_num_x
-    data['assembly-metrics']['assembly-num-y'] = assembly_num_y
+    if main_cell:
+        data['main-cell'] = main_cell
+        data['assembly-metrics']['assembly-num-x'] = assembly_num_x
+        data['assembly-metrics']['assembly-num-y'] = assembly_num_y
+        data['assembly-metrics']['assembly-pitch-x'] = cell_data[main_cell]['x-pitch']
+        data['assembly-metrics']['assembly-pitch-y'] = cell_data[main_cell]['y-pitch']
 
-    if clicks and selected_cell:
-
+    if selected_cell:
         # If there is no entry at all for selections of specified cell type
         if selected_cell not in cells.keys():
             cells.update({'{}'.format(selected_cell): {'indices': selection_locs['selected-cells']}})
@@ -607,7 +614,6 @@ def configure_stores(clicks, main_cell, assembly_dim_x, assembly_dim_y, assembly
                         # Remove those indices from that cell
                         cells[cells_list[i]]['indices'].remove(cells[selected_cell]['indices'][k])
 
-    print(data)
     return data
 
 
@@ -617,16 +623,16 @@ def configure_stores(clicks, main_cell, assembly_dim_x, assembly_dim_y, assembly
      Input('temp-assembly-stores', 'data')],
 )
 def fill_assembly(data, assembly_data):
-    main_cell = assembly_data['main-cell']
+    main_cell = assembly_data['main-cell'] if assembly_data else None
 
     if data and main_cell:
-        assembly_dim_x = assembly_data['assembly-metrics']['assembly-dim-x']
-        assembly_dim_y = assembly_data['assembly-metrics']['assembly-dim-y']
+        # assembly_dim_x = assembly_data['assembly-metrics']['assembly-dim-x']
+        # assembly_dim_y = assembly_data['assembly-metrics']['assembly-dim-y']
         assembly_num_x = assembly_data['assembly-metrics']['assembly-num-x']
         assembly_num_y = assembly_data['assembly-metrics']['assembly-num-y']
 
-        pitch_x = assembly_dim_x / assembly_num_x
-        pitch_y = assembly_dim_y / assembly_num_y
+        pitch_x = assembly_data['assembly-metrics']['assembly-pitch-x']
+        pitch_y = assembly_data['assembly-metrics']['assembly-pitch-y']
 
         # if planes[0] * assembly_num_x > assembly_dim_x or planes[0] * assembly_num_y > assembly_dim_y:
         #     return html.P("Assembly Dimensions and/or Quantities are insensible. You will see this message"
@@ -763,6 +769,7 @@ def store_to_assemblies(click, assembly_name, assembly_data, all_assembly_data):
         all_assembly_data.update({'{}'.format(assembly_name): assembly_data})
 
     return all_assembly_data
+
 
 #######################################################################################################################
 # Full-Core

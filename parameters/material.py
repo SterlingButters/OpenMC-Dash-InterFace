@@ -114,13 +114,13 @@ for n in range(np.shape(z)[0]):
         annotations.append(go.layout.Annotation(text=str(symbol[n][m]), x=x[m], y=y[n],
                                                 xref='x1', yref='y1', showarrow=False,
                                                 font=dict(family='Courier New',
-                                                          size=20,
+                                                          size=15,
                                                           color='black')))
 
         annotations.append(go.layout.Annotation(text=str(atomic_number[n][m]), x=x[m] + .3, y=y[n] + .3,
                                                 xref='x1', yref='y1', showarrow=False,
                                                 font=dict(family='Courier New',
-                                                          size=15,
+                                                          size=10,
                                                           color='black')
                                                 ))
 
@@ -134,8 +134,8 @@ periodic_table['layout'].update(
     annotations=annotations,
     xaxis=dict(zeroline=False, showgrid=False, showticklabels=False, ticks='', ),
     yaxis=dict(zeroline=False, showgrid=False, showticklabels=False, ticks='', ),
-    width=1250,
-    height=750,
+    width=800,
+    height=500,
     autosize=False
 )
 
@@ -159,10 +159,6 @@ layout = html.Div([
     html.Br(),
 
     html.Div([
-        dcc.Graph(id='periodic-table',
-                  figure=periodic_table
-                  ),
-        html.Div(id='chosen-element'),
         html.Div([
             html.Div([
                 html.H4("Add a Material"),
@@ -174,37 +170,59 @@ layout = html.Div([
             The dropdown menu selector allows you to select previously submitted materials to view
             or make changes to subsequent parameters.  
                """),
-                html.Div([html.Label('Material Name'),
-                          dcc.Input(id='material-name', placeholder='Enter Material Name', type="text"),
-                          daq.NumericInput(
-                              id='material-density',
-                              min=0,
-                              max=25,
-                              value=10.1,
-                              label='Material Density',
-                              labelPosition='top',
-                              size=120
-                          ),
-                          daq.NumericInput(
-                              id='material-temperature',
-                              min=0,
-                              max=4000,
-                              value=250,
-                              label='Material Temperature',
-                              labelPosition='top',
-                              size=120
-                          ),
-                          daq.Thermometer(
-                              min=0,
-                              max=4000,
-                              value=250,
-                              showCurrentValue=True,
-                              units="F",
-                              size=100
-                          ),
-                          html.Button('Submit Material', id='submit-material-button', n_clicks_timestamp=0),
-                          html.Br()
-                          ]),
+                html.Div([
+                    html.Div([
+                        html.Div([
+                            html.Label('Material Name'),
+                            dcc.Input(id='material-name', placeholder='Enter Material Name', type="text"),
+                            daq.NumericInput(
+                                id='material-density',
+                                min=0,
+                                max=25,
+                                value=10.1,
+                                label='Material Density',
+                                labelPosition='top',
+                                size=200
+                            ),
+                            daq.NumericInput(
+                                id='material-temperature',
+                                min=0,
+                                max=4000,
+                                value=250,
+                                label='Material Temperature',
+                                labelPosition='top',
+                                size=200
+                            ), html.Br(),
+                            html.Button('Submit Material', id='submit-material-button', n_clicks_timestamp=0),
+                        ],
+                            style=dict(
+                                display='table-cell',
+                                verticalAlign="top",
+                                width='50%'
+                            ),
+                        ),
+                        html.Div([
+                            daq.Thermometer(
+                                min=0,
+                                max=4000,
+                                value=250,
+                                showCurrentValue=True,
+                                units="F",
+                                size=250
+                            ),
+                        ],
+                            style=dict(
+                                display='table-cell',
+                                verticalAlign="top",
+                                width='50%'
+                            ),
+                        )
+                    ], style=dict(
+                        width='100%',
+                        display='table',
+                    )),
+                ]),
+                dcc.Graph(id='material-display')
             ],
                 style=dict(
                     display='table-cell',
@@ -223,22 +241,55 @@ layout = html.Div([
                 """),
                 html.H5("List of Materials"),
                 dcc.Dropdown(id='material-dropdown'),
+                dcc.Graph(id='periodic-table',
+                          figure=periodic_table
+                          ),
+                html.Div(id='chosen-element'),
                 html.Div([
-                    dcc.Input(id='atomic-mass', placeholder='Enter Atomic Mass (if isotope)', type='number', size=70),
-                    daq.ToggleSwitch(id='composition-option', label='Atomic Percent/Weight Percent', value=False),
-                    daq.NumericInput(
-                        id='composition-percent',
-                        min=0,
-                        value=0,
-                        label='Percent Composition',
-                        labelPosition='top',
-                        size=120
-                    ),
-                    html.Button('Submit Element/Isotope', id='submit-isotope-button', n_clicks_timestamp=0)
-                ]),
 
-                html.Div(id='isotope-message-update'),
-                html.Div(style=dict(height=50)),
+                    html.Div([
+                        html.Div([
+                            html.Div(style=dict(height=30)),
+                            dcc.Input(id='atomic-mass', placeholder='Enter Atomic Mass (if isotope)', type='number',
+                                      size=70),
+                        ],
+                            style=dict(
+                                display='table-cell',
+                                verticalAlign="top",
+                                width='30%'
+                            )),
+                        html.Div([
+
+                            daq.ToggleSwitch(id='composition-option', label='Atomic Percent/Weight Percent',
+                                             value=False), html.Br(),
+                            html.Button('Submit Element/Isotope', id='submit-isotope-button', n_clicks_timestamp=0)
+                        ],
+                            style=dict(
+                                display='table-cell',
+                                verticalAlign="top",
+                                width='30%'
+                            )),
+                        html.Div([
+                            daq.NumericInput(
+                                id='composition-percent',
+                                min=0,
+                                value=0,
+                                label='Percent Composition',
+                                labelPosition='top',
+                                size=120
+                            ),
+                        ],
+                            style=dict(
+                                display='table-cell',
+                                verticalAlign="top",
+                                width='30%'
+                            ))
+                    ],
+                        style=dict(
+                            width='100%',
+                            display='table',
+                        )),
+                ]),
             ],
                 style=dict(
                     display='table-cell',
@@ -252,8 +303,6 @@ layout = html.Div([
                 display='table',
             ),
         ),
-
-        dcc.Graph(id='material-display')
     ]),
 
 ])

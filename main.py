@@ -1,7 +1,8 @@
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
 import matplotlib
+from dash.dependencies import Input, Output
+
 matplotlib.use("Agg")
 
 from app import app
