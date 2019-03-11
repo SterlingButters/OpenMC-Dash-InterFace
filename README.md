@@ -40,7 +40,7 @@ are made.
 - Create Cross-Section Plots
 - 3D Rendering of Geometry
 - Graph Cell(s)/Assembly(ies) from Memory
-- Add Snackbars to Alert User that options have been added to dropdowns
+- Add Snackbars to Alert User that configs have been accepted into data
 - Other Styling
 
 #### Questionable Features

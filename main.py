@@ -9,6 +9,17 @@ from app import app
 from parameters import material, geometry, settings, mesh_tallies_xsections, runtime, postprocessing
 
 app.layout = html.Div([
+    html.Img(
+        src="https://cert.tees.tamu.edu/wp-content/uploads/sites/3/2017/11/NUEN_secondary.png",
+        className='one columns',
+        style={
+            'height': '140',
+            'width': '800',
+            'float': 'right',
+            'position': 'relative',
+        },
+    ),
+
     dcc.Location(id='url', refresh=False, pathname='/parameters/material'),
 
     # TODO: Storage data not persist through pathname change -> storage_type to 'memory' has no effect
@@ -32,7 +43,7 @@ app.layout = html.Div([
 
     dcc.Link('Materials', href='/parameters/material'), html.Br(),
     dcc.Link('Geometry', href='/parameters/geometry'), html.Br(),
-    dcc.Link('Mesh, Tallies/Scoring, Cross-sections', href='/parameters/mesh_tallies_xsections'), html.Br(),
+    dcc.Link('Mesh & Tallies & Cross-Sections', href='/parameters/mesh_tallies_xsections'), html.Br(),
     dcc.Link('Settings', href='/parameters/settings'), html.Br(),
     dcc.Link('Verification & Run', href='/parameters/runtime'), html.Br(),
     dcc.Link('Postprocessing', href='/parameters/postprocessing'), html.Br(),

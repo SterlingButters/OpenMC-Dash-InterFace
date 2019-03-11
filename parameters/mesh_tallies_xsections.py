@@ -25,20 +25,23 @@ layout = html.Div([
         Please select the type of mesh you would like to create from the dropdown then determine your desired selections 
         from the subsequent options that are displayed. The state of the mesh filter dropdown and the score/tally checklist
         will determine what mesh filters are applied to what scores. You may specify one spatial and one energy filter. 
-        If you try anything else, well, it just wont make sense.
+        The filter dropdown will populate based on your latest energy and spatial mesh definitions.
            """),
     ########################################################################################################
     # Mesh
     html.Div([
-        dcc.Dropdown(id='choose-mesh'),  # TODO: Dynamic Layout Callback to only display spatial or energy mesh options
-        html.Label('Energy'),
+        dcc.Dropdown(id='mesh-type',
+                     options=[{'label': 'Energy Filter', 'value': 'energy'},
+                              {'label': 'Spatial Filter', 'value': 'spatial'}],
+                     value='spatial'),
+        html.Label('Energy Filter'),
         dcc.Slider(id='mesh-energy-slider',
-                   min=-5,
-                   max=10,
-                   step=0.5,
-                   value=-3,
+                   min=0,
+                   max=100,
+                   step=1,
+                   value=25,
+                   marks={i: i for i in range(0, 100, 10)},
                    ),
-        html.Br(),
         html.Label('Mesh x-resolution'),
         dcc.Slider(id='mesh-x-slider',
                    min=1,
@@ -237,7 +240,7 @@ layout = html.Div([
             value=5,
             marks={i: i for i in range(0, 10, 1)},
         ), html.Br(),
-        dcc.Dropdown(id='xsection-types', options=[
+        dcc.Dropdown(id='xsection-types', multi=True, options=[
             {'label': 'Total', 'value': 'total'},
             {'label': 'Transport', 'value': 'transport'},
             {'label': 'Nu Scatter Matrix', 'value': 'nu-scatter matrix'},
@@ -260,39 +263,41 @@ layout = html.Div([
 #######################################################################################################################
 # Mesh Interface
 
-
 @app.callback(
     Output('mesh-stores', 'data'),
     [Input('submit-mesh-button', 'n_clicks')],
     [State('mesh-name', 'value'),
-
+     State('mesh-type', 'value'),
      State('mesh-energy-slider', 'value'),
      State('mesh-x-slider', 'value'),
      State('mesh-y-slider', 'value'),
      State('mesh-z-slider', 'value'),
      State('boundary-stores', 'data'),
      State('mesh-stores', 'data')])
-def mesh_creation(click, mesh_name, energy_resolution, x_resolution, y_resolution, z_resolution, boundary_data,
+def mesh_creation(click, mesh_name, mesh_type, energy_resolution, x_resolution, y_resolution, z_resolution,
+                  boundary_data,
                   mesh_data):
     mesh_data = mesh_data or {}
 
     if click:
-        width = boundary_data['X-max'] - boundary_data['X-min']
-        depth = boundary_data['Y-max'] - boundary_data['Y-min']
-        height = boundary_data['Z-max'] - boundary_data['Z-min']
+        if mesh_type == 'energy':
+            mesh_data.update({'{}'.format(mesh_name): {'type': mesh_type,
+                                                       'energy-resolution': energy_resolution}})
 
-        mesh_data.update({'{}'.format(mesh_name):
-                              {'width': width,
-                               'depth': depth,
-                               'height': height,
-                               'x-resolution': x_resolution,
-                               'y-resolution': y_resolution,
-                               'z-resolution': z_resolution,
-                               'energy-resolution': energy_resolution
-                               },
-                          })
+        if mesh_type == 'spatial':
+            width = boundary_data['X-max'] - boundary_data['X-min']
+            depth = boundary_data['Y-max'] - boundary_data['Y-min']
+            height = boundary_data['Z-max'] - boundary_data['Z-min']
 
-    return mesh_data
+            mesh_data.update({'{}'.format(mesh_name): {'type': mesh_type,
+                                                       'width': width,
+                                                       'depth': depth,
+                                                       'height': height,
+                                                       'x-resolution': x_resolution,
+                                                       'y-resolution': y_resolution,
+                                                       'z-resolution': z_resolution}})
+
+        return mesh_data
 
 
 @app.callback(
@@ -301,8 +306,16 @@ def mesh_creation(click, mesh_name, energy_resolution, x_resolution, y_resolutio
 )
 def populate_dropdown(mesh_data):
     mesh_options = []
-    for mesh_name in mesh_data.keys():
-        mesh_options.append({'label': mesh_name, 'value': mesh_name})
+    if mesh_data:
+        for mesh_name in list(mesh_data.keys())[::-1]:
+            num_energy_filters = 0
+            num_spatial_filters = 0
+            if mesh_data[mesh_name]['type'] == 'energy' and num_energy_filters < 1:
+                mesh_options.append({'label': mesh_name, 'value': mesh_name})
+                num_energy_filters += 1
+            if mesh_data[mesh_name]['type'] == 'spatial' and num_spatial_filters < 1:
+                mesh_options.append({'label': mesh_name, 'value': mesh_name})
+                num_spatial_filters += 1
 
     return mesh_options
 
@@ -319,17 +332,16 @@ def populate_dropdown(mesh_data):
      State('performance-checklist', 'values'),
      State('nu-other-checklist', 'values'),
      State('RR-checklist', 'values'),
+     State('mesh-stores', 'data'),
      State('mesh-score-stores', 'data')]
 )
-def store_scores(click, mesh_filters, scores1, scores2, scores3, scores4, score_data):
+def store_scores(click, mesh_filters, scores1, scores2, scores3, scores4, mesh_data, score_data):
     score_data = score_data or {}
     if click:
         scores = []
         [scores.extend(score) for score in [scores1, scores2, scores3, scores4]]
-        score_data.update({'{}'.format(click):
-                               {'filters': mesh_filters,
-                                'scores': scores}
-                           })
+        score_data.update({'filters': [mesh_data[mesh_filter] for mesh_filter in mesh_filters],
+                           'scores': scores})
 
         print(score_data)
     return score_data

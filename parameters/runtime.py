@@ -78,6 +78,14 @@ layout = html.Div([
             html.Button('Load Material XML File', n_clicks=0, id='load-materials'),
             html.Button('Write Material XML File', n_clicks=0, id='write-materials'),
             html.P(id='material-placeholder'),  # Used as dummy for mandatory Output in decorator
+
+            html.Div(style=dict(height=250)),
+
+            html.Div(id='memory-display'),
+            html.Button('Run Simulation', id='run-button', n_clicks=0),
+            html.Br(),
+            dcc.Textarea(id='console-output', rows=40, cols=75, placeholder='Console Output will appear here...',
+                         readOnly=True),
         ],
             style=dict(
                 width='30%',
@@ -116,14 +124,6 @@ layout = html.Div([
         display='table',
     ),
     ),
-    #############################################################################
-    # Simulation
-    html.Div(id='memory-display'),
-    html.Button('Run Simulation', id='run-button', n_clicks=0),
-    html.Br(),
-    dcc.Textarea(id='console-output', rows=40, cols=75, placeholder='Console Output will appear here...',
-                 readOnly=True),
-
 ])
 
 
@@ -141,6 +141,7 @@ def populate_dropdown(cell_data, assembly_data):
     for assembly_name in assembly_data.keys():
         options.append({'label': assembly_name, 'value': assembly_name})
 
+    print("Root Dropdown options:", options)
     return options
 
 ############################################################################################################
@@ -455,20 +456,27 @@ def build_model(click, root_geometry, material_data, cell_data, assembly_data, b
         #######################################
         # Mesh
 
-        mesh = openmc.Mesh()
-        mesh.type = 'regular'
-        dim_x = mesh_data['x-resolution']
-        dim_y = mesh_data['y-resolution']
-        dim_z = mesh_data['z-resolution']
-        width = mesh_data['width']
-        depth = mesh_data['depth']
-        height = mesh_data['height']
-        mesh.dimension = [dim_x, dim_y, dim_z]
-        mesh.lower_left = [-width / 2, -depth / 2, -height / 2]
-        mesh.width = [width / dim_x, depth / dim_y, height / dim_z]
+        spatial_mesh = openmc.Mesh()
+        spatial_mesh.type = 'regular'
+
+        # energy_mesh = openmc.Mesh()
+        for filter in score_data['filters']:
+            if mesh_data[filter]['type'] == 'spatial':
+                dim_x = mesh_data[filter]['x-resolution']
+                dim_y = mesh_data[filter]['y-resolution']
+                dim_z = mesh_data[filter]['z-resolution']
+                width = mesh_data[filter]['width']
+                depth = mesh_data[filter]['depth']
+                height = mesh_data[filter]['height']
+                spatial_mesh.dimension = [dim_x, dim_y, dim_z]
+                spatial_mesh.lower_left = [-width / 2, -depth / 2, -height / 2]
+                spatial_mesh.width = [width / dim_x, depth / dim_y, height / dim_z]
+
+            # if mesh_data[filter_name]['type'] == 'energy':
+                # TODO
 
         # Create a mesh filter
-        mesh_filter = openmc.MeshFilter(mesh)
+        mesh_filter = openmc.MeshFilter(spatial_mesh)
 
         #######################################
         # Cross-sections
@@ -484,13 +492,13 @@ def build_model(click, root_geometry, material_data, cell_data, assembly_data, b
         mesh_tally.filters = [mesh_filter]
         mesh_tally.scores = score_data['scores']
 
-        energy_tally = openmc.Tally(name='Energy')
+        # energy_tally = openmc.Tally(name='Energy')
         # energy_tally.filters = [energy_filter]
-        energy_tally.scores = score_data['scores']
+        # energy_tally.scores = score_data['scores']
 
         # Add tallies to the tallies file
         model.tallies.append(mesh_tally)
-        model.tallies.append(energy_tally)
+        # model.tallies.append(energy_tally)
 
         #######################################
         # Settings TODO: Check
