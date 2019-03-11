@@ -1,15 +1,12 @@
-from PIL import Image
-
 import numpy as np
-import pandas as pd
-
 import openmc
-import openmc.model
 import openmc.mgxs
-
+import openmc.model
+import pandas as pd
+import plotly
 import plotly.graph_objs as go
 from plotly.offline import init_notebook_mode
-import plotly
+
 init_notebook_mode(connected=True)
 
 
@@ -151,10 +148,10 @@ def pwr_pin_cell():
     pitch = 1.26
     fuel_or = openmc.ZCylinder(x0=0, y0=0, R=0.39218, name='Fuel OR')
     clad_or = openmc.ZCylinder(x0=0, y0=0, R=0.45720, name='Clad OR')
-    left = openmc.XPlane(x0=-pitch/2, name='left', boundary_type='reflective')
-    right = openmc.XPlane(x0=pitch/2, name='right', boundary_type='reflective')
-    bottom = openmc.YPlane(y0=-pitch/2, name='bottom', boundary_type='reflective')
-    top = openmc.YPlane(y0=pitch/2, name='top', boundary_type='reflective')
+    left = openmc.XPlane(x0=-pitch / 2, name='left', boundary_type='reflective')
+    right = openmc.XPlane(x0=pitch / 2, name='right', boundary_type='reflective')
+    bottom = openmc.YPlane(y0=-pitch / 2, name='bottom', boundary_type='reflective')
+    top = openmc.YPlane(y0=pitch / 2, name='top', boundary_type='reflective')
 
     # Instantiate Cells
     fuel_pin = openmc.Cell(name='Fuel', fill=fuel)
@@ -174,7 +171,7 @@ def pwr_pin_cell():
     model.settings.inactive = 5
     model.settings.particles = 100
     model.settings.source = openmc.Source(space=openmc.stats.Box(
-        [-pitch/2, -pitch/2, -1], [pitch/2, pitch/2, 1], only_fissionable=True))
+        [-pitch / 2, -pitch / 2, -1], [pitch / 2, pitch / 2, 1], only_fissionable=True))
 
     plot = openmc.Plot.from_geometry(model.geometry)
     plot.pixels = (300, 300)
@@ -241,12 +238,12 @@ def pwr_assembly():
     # Create boundary planes to surround the geometry
     pitch = 21.42
     height = 200
-    min_x = openmc.XPlane(x0=-pitch/2, boundary_type='reflective')
-    max_x = openmc.XPlane(x0=+pitch/2, boundary_type='reflective')
-    min_y = openmc.YPlane(y0=-pitch/2, boundary_type='reflective')
-    max_y = openmc.YPlane(y0=+pitch/2, boundary_type='reflective')
-    min_z = openmc.ZPlane(z0=-height/2, boundary_type='reflective')
-    max_z = openmc.ZPlane(z0=+height/2, boundary_type='reflective')
+    min_x = openmc.XPlane(x0=-pitch / 2, boundary_type='reflective')
+    max_x = openmc.XPlane(x0=+pitch / 2, boundary_type='reflective')
+    min_y = openmc.YPlane(y0=-pitch / 2, boundary_type='reflective')
+    max_y = openmc.YPlane(y0=+pitch / 2, boundary_type='reflective')
+    min_z = openmc.ZPlane(z0=-height / 2, boundary_type='reflective')
+    max_z = openmc.ZPlane(z0=+height / 2, boundary_type='reflective')
 
     # Create a control rod guide tube universe
     guide_tube_universe = openmc.Universe(name='Guide Tube')
@@ -260,8 +257,8 @@ def pwr_assembly():
 
     # Create fuel assembly Lattice
     assembly = openmc.RectLattice(name='Fuel Assembly')
-    assembly.pitch = (pitch/17, pitch/17)
-    assembly.lower_left = (-pitch/2, -pitch/2)
+    assembly.pitch = (pitch / 17, pitch / 17)
+    assembly.lower_left = (-pitch / 2, -pitch / 2)
 
     # Create array indices for guide tube locations in lattice
     template_x = np.array([5, 8, 11, 3, 13, 2, 5, 8, 11, 14, 2, 5, 8,
@@ -351,7 +348,7 @@ def pwr_assembly():
     model.settings.inactive = 5
     model.settings.particles = 100
     model.settings.source = openmc.Source(space=openmc.stats.Box(
-        [-pitch/2, -pitch/2, -height/2], [pitch/2, pitch/2, height/2], only_fissionable=True))
+        [-pitch / 2, -pitch / 2, -height / 2], [pitch / 2, pitch / 2, height / 2], only_fissionable=True))
 
     ############################################################################################################
     # PLOT
@@ -567,27 +564,27 @@ def pwr_core():
 
     # Define pin cells.
     fuel_cold = openmc.Universe(name='Fuel pin, cladding, cold water', universe_id=1)
-    c21 = openmc.Cell(cell_id=21, fill=fuel,       region=-s1)
-    c22 = openmc.Cell(cell_id=22, fill=clad,       region=+s1 & -s2)
+    c21 = openmc.Cell(cell_id=21, fill=fuel, region=-s1)
+    c22 = openmc.Cell(cell_id=22, fill=clad, region=+s1 & -s2)
     c23 = openmc.Cell(cell_id=23, fill=cold_water, region=+s2)
     fuel_cold.add_cells((c21, c22, c23))
 
     tube_cold = openmc.Universe(name='Instrumentation guide tube, '
-                                'cold water', universe_id=2)
+                                     'cold water', universe_id=2)
     c24 = openmc.Cell(cell_id=24, fill=cold_water, region=-s3)
-    c25 = openmc.Cell(cell_id=25, fill=clad,       region=+s3 & -s4)
+    c25 = openmc.Cell(cell_id=25, fill=clad, region=+s3 & -s4)
     c26 = openmc.Cell(cell_id=26, fill=cold_water, region=+s4)
     tube_cold.add_cells((c24, c25, c26))
 
     fuel_hot = openmc.Universe(name='Fuel pin, cladding, hot water', universe_id=3)
-    c27 = openmc.Cell(cell_id=27, fill=fuel,      region=-s1)
-    c28 = openmc.Cell(cell_id=28, fill=clad,      region=+s1 & -s2)
+    c27 = openmc.Cell(cell_id=27, fill=fuel, region=-s1)
+    c28 = openmc.Cell(cell_id=28, fill=clad, region=+s1 & -s2)
     c29 = openmc.Cell(cell_id=29, fill=hot_water, region=+s2)
     fuel_hot.add_cells((c27, c28, c29))
 
     tube_hot = openmc.Universe(name='Instrumentation guide tube, hot water', universe_id=4)
     c30 = openmc.Cell(cell_id=30, fill=hot_water, region=-s3)
-    c31 = openmc.Cell(cell_id=31, fill=clad,      region=+s3 & -s4)
+    c31 = openmc.Cell(cell_id=31, fill=clad, region=+s3 & -s4)
     c32 = openmc.Cell(cell_id=32, fill=hot_water, region=+s4)
     tube_hot.add_cells((c30, c31, c32))
 
@@ -597,19 +594,18 @@ def pwr_core():
     tube_y = np.array([2, 2, 2, 3, 3, 5, 5, 5, 5, 5, 8, 8, 8, 8, 8,
                        11, 11, 11, 11, 11, 13, 13, 14, 14, 14])
 
-
     # Define fuel lattices.
     NUM_PINS = 17
     PITCH_PIN = 1.26
 
     l100 = openmc.RectLattice(name='Fuel assembly (lower half)', lattice_id=100)
-    l100.lower_left = (-PITCH_PIN*NUM_PINS/2, -PITCH_PIN*NUM_PINS/2)
+    l100.lower_left = (-PITCH_PIN * NUM_PINS / 2, -PITCH_PIN * NUM_PINS / 2)
     l100.pitch = (PITCH_PIN, PITCH_PIN)
     l100.universes = np.tile(fuel_cold, (NUM_PINS, NUM_PINS))
     l100.universes[tube_x, tube_y] = tube_cold
 
     l101 = openmc.RectLattice(name='Fuel assembly (upper half)', lattice_id=101)
-    l101.lower_left = (-PITCH_PIN*NUM_PINS/2, -PITCH_PIN*NUM_PINS/2)
+    l101.lower_left = (-PITCH_PIN * NUM_PINS / 2, -PITCH_PIN * NUM_PINS / 2)
     l101.pitch = (PITCH_PIN, PITCH_PIN)
     l101.universes = np.tile(fuel_hot, (NUM_PINS, NUM_PINS))
     l101.universes[tube_x, tube_y] = tube_hot
@@ -635,68 +631,68 @@ def pwr_core():
     PITCH_ASSEMBLY = 21.42
 
     l200 = openmc.RectLattice(name='Core lattice (lower half)', lattice_id=200)
-    l200.lower_left = (-PITCH_ASSEMBLY*21/2, -PITCH_ASSEMBLY*21/2)
+    l200.lower_left = (-PITCH_ASSEMBLY * 21 / 2, -PITCH_ASSEMBLY * 21 / 2)
     l200.pitch = (PITCH_ASSEMBLY, PITCH_ASSEMBLY)
     l200.universes = [
-                    [fa_cw]*21,
-                    [fa_cw]*21,
-        [fa_cw]*7 + [fa_cold]*7  + [fa_cw]*7,
-        [fa_cw]*5 + [fa_cold]*11 + [fa_cw]*5,
-        [fa_cw]*4 + [fa_cold]*13 + [fa_cw]*4,
-        [fa_cw]*3 + [fa_cold]*15 + [fa_cw]*3,
-        [fa_cw]*3 + [fa_cold]*15 + [fa_cw]*3,
-        [fa_cw]*2 + [fa_cold]*17 + [fa_cw]*2,
-        [fa_cw]*2 + [fa_cold]*17 + [fa_cw]*2,
-        [fa_cw]*2 + [fa_cold]*17 + [fa_cw]*2,
-        [fa_cw]*2 + [fa_cold]*17 + [fa_cw]*2,
-        [fa_cw]*2 + [fa_cold]*17 + [fa_cw]*2,
-        [fa_cw]*2 + [fa_cold]*17 + [fa_cw]*2,
-        [fa_cw]*2 + [fa_cold]*17 + [fa_cw]*2,
-        [fa_cw]*3 + [fa_cold]*15 + [fa_cw]*3,
-        [fa_cw]*3 + [fa_cold]*15 + [fa_cw]*3,
-        [fa_cw]*4 + [fa_cold]*13 + [fa_cw]*4,
-        [fa_cw]*5 + [fa_cold]*11 + [fa_cw]*5,
-        [fa_cw]*7 + [fa_cold]*7 + [fa_cw]*7,
-                    [fa_cw]*21,
-                    [fa_cw]*21]
+        [fa_cw] * 21,
+        [fa_cw] * 21,
+        [fa_cw] * 7 + [fa_cold] * 7 + [fa_cw] * 7,
+        [fa_cw] * 5 + [fa_cold] * 11 + [fa_cw] * 5,
+        [fa_cw] * 4 + [fa_cold] * 13 + [fa_cw] * 4,
+        [fa_cw] * 3 + [fa_cold] * 15 + [fa_cw] * 3,
+        [fa_cw] * 3 + [fa_cold] * 15 + [fa_cw] * 3,
+        [fa_cw] * 2 + [fa_cold] * 17 + [fa_cw] * 2,
+        [fa_cw] * 2 + [fa_cold] * 17 + [fa_cw] * 2,
+        [fa_cw] * 2 + [fa_cold] * 17 + [fa_cw] * 2,
+        [fa_cw] * 2 + [fa_cold] * 17 + [fa_cw] * 2,
+        [fa_cw] * 2 + [fa_cold] * 17 + [fa_cw] * 2,
+        [fa_cw] * 2 + [fa_cold] * 17 + [fa_cw] * 2,
+        [fa_cw] * 2 + [fa_cold] * 17 + [fa_cw] * 2,
+        [fa_cw] * 3 + [fa_cold] * 15 + [fa_cw] * 3,
+        [fa_cw] * 3 + [fa_cold] * 15 + [fa_cw] * 3,
+        [fa_cw] * 4 + [fa_cold] * 13 + [fa_cw] * 4,
+        [fa_cw] * 5 + [fa_cold] * 11 + [fa_cw] * 5,
+        [fa_cw] * 7 + [fa_cold] * 7 + [fa_cw] * 7,
+        [fa_cw] * 21,
+        [fa_cw] * 21]
 
     l201 = openmc.RectLattice(name='Core lattice (upper half)', lattice_id=201)
-    l201.lower_left = (-PITCH_ASSEMBLY*21/2, -PITCH_ASSEMBLY*21/2)
+    l201.lower_left = (-PITCH_ASSEMBLY * 21 / 2, -PITCH_ASSEMBLY * 21 / 2)
     l201.pitch = (PITCH_ASSEMBLY, PITCH_ASSEMBLY)
     l201.universes = [
-                    [fa_hw]*21,
-                    [fa_hw]*21,
-        [fa_hw]*7 + [fa_hot]*7 + [fa_hw]*7,
-        [fa_hw]*5 + [fa_hot]*11 + [fa_hw]*5,
-        [fa_hw]*4 + [fa_hot]*13 + [fa_hw]*4,
-        [fa_hw]*3 + [fa_hot]*15 + [fa_hw]*3,
-        [fa_hw]*3 + [fa_hot]*15 + [fa_hw]*3,
-        [fa_hw]*2 + [fa_hot]*17 + [fa_hw]*2,
-        [fa_hw]*2 + [fa_hot]*17 + [fa_hw]*2,
-        [fa_hw]*2 + [fa_hot]*17 + [fa_hw]*2,
-        [fa_hw]*2 + [fa_hot]*17 + [fa_hw]*2,
-        [fa_hw]*2 + [fa_hot]*17 + [fa_hw]*2,
-        [fa_hw]*2 + [fa_hot]*17 + [fa_hw]*2,
-        [fa_hw]*2 + [fa_hot]*17 + [fa_hw]*2,
-        [fa_hw]*3 + [fa_hot]*15 + [fa_hw]*3,
-        [fa_hw]*3 + [fa_hot]*15 + [fa_hw]*3,
-        [fa_hw]*4 + [fa_hot]*13 + [fa_hw]*4,
-        [fa_hw]*5 + [fa_hot]*11 + [fa_hw]*5,
-        [fa_hw]*7 + [fa_hot]*7 + [fa_hw]*7,
-                    [fa_hw]*21,
-                    [fa_hw]*21]
+        [fa_hw] * 21,
+        [fa_hw] * 21,
+        [fa_hw] * 7 + [fa_hot] * 7 + [fa_hw] * 7,
+        [fa_hw] * 5 + [fa_hot] * 11 + [fa_hw] * 5,
+        [fa_hw] * 4 + [fa_hot] * 13 + [fa_hw] * 4,
+        [fa_hw] * 3 + [fa_hot] * 15 + [fa_hw] * 3,
+        [fa_hw] * 3 + [fa_hot] * 15 + [fa_hw] * 3,
+        [fa_hw] * 2 + [fa_hot] * 17 + [fa_hw] * 2,
+        [fa_hw] * 2 + [fa_hot] * 17 + [fa_hw] * 2,
+        [fa_hw] * 2 + [fa_hot] * 17 + [fa_hw] * 2,
+        [fa_hw] * 2 + [fa_hot] * 17 + [fa_hw] * 2,
+        [fa_hw] * 2 + [fa_hot] * 17 + [fa_hw] * 2,
+        [fa_hw] * 2 + [fa_hot] * 17 + [fa_hw] * 2,
+        [fa_hw] * 2 + [fa_hot] * 17 + [fa_hw] * 2,
+        [fa_hw] * 3 + [fa_hot] * 15 + [fa_hw] * 3,
+        [fa_hw] * 3 + [fa_hot] * 15 + [fa_hw] * 3,
+        [fa_hw] * 4 + [fa_hot] * 13 + [fa_hw] * 4,
+        [fa_hw] * 5 + [fa_hot] * 11 + [fa_hw] * 5,
+        [fa_hw] * 7 + [fa_hot] * 7 + [fa_hw] * 7,
+        [fa_hw] * 21,
+        [fa_hw] * 21]
 
     # Define root universe.
     root = openmc.Universe(universe_id=0, name='root universe')
-    c1  = openmc.Cell(cell_id=1, fill=l200, region=-s6 & +s34 & -s35)
-    c2  = openmc.Cell(cell_id=2, fill=l201, region=-s6 & +s35 & -s36)
-    c3  = openmc.Cell(cell_id=3, fill=bot_plate, region=-s7 & +s31 & -s32)
-    c4  = openmc.Cell(cell_id=4, fill=bot_nozzle, region=-s5 & +s32 & -s33)
-    c5  = openmc.Cell(cell_id=5, fill=bot_fa, region=-s5 & +s33 & -s34)
-    c6  = openmc.Cell(cell_id=6, fill=top_fa, region=-s5 & +s36 & -s37)
-    c7  = openmc.Cell(cell_id=7, fill=top_nozzle, region=-s5 & +s37 & -s38)
-    c8  = openmc.Cell(cell_id=8, fill=upper_rad_ref, region=-s7 & +s38 & -s39)
-    c9  = openmc.Cell(cell_id=9, fill=bot_nozzle, region=+s6 & -s7 & +s32 & -s38)
+    c1 = openmc.Cell(cell_id=1, fill=l200, region=-s6 & +s34 & -s35)
+    c2 = openmc.Cell(cell_id=2, fill=l201, region=-s6 & +s35 & -s36)
+    c3 = openmc.Cell(cell_id=3, fill=bot_plate, region=-s7 & +s31 & -s32)
+    c4 = openmc.Cell(cell_id=4, fill=bot_nozzle, region=-s5 & +s32 & -s33)
+    c5 = openmc.Cell(cell_id=5, fill=bot_fa, region=-s5 & +s33 & -s34)
+    c6 = openmc.Cell(cell_id=6, fill=top_fa, region=-s5 & +s36 & -s37)
+    c7 = openmc.Cell(cell_id=7, fill=top_nozzle, region=-s5 & +s37 & -s38)
+    c8 = openmc.Cell(cell_id=8, fill=upper_rad_ref, region=-s7 & +s38 & -s39)
+    c9 = openmc.Cell(cell_id=9, fill=bot_nozzle, region=+s6 & -s7 & +s32 & -s38)
     c10 = openmc.Cell(cell_id=10, fill=rpv_steel, region=+s7 & -s8 & +s31 & -s39)
     c11 = openmc.Cell(cell_id=11, fill=lower_rad_ref, region=+s5 & -s6 & +s32 & -s34)
     c12 = openmc.Cell(cell_id=12, fill=upper_rad_ref, region=+s5 & -s6 & +s36 & -s38)
@@ -710,8 +706,8 @@ def pwr_core():
 
     mesh = openmc.Mesh(mesh_id=1)
     mesh.type = 'regular'
-    mesh.dimension   = (1000, 1000, 1)
-    mesh.lower_left  = (-229.0, -229.0, -229.0)
+    mesh.dimension = (1000, 1000, 1)
+    mesh.lower_left = (-229.0, -229.0, -229.0)
     mesh.upper_right = (229.0, 229.0, 229.0)
 
     # Create a mesh filter
@@ -793,6 +789,7 @@ def pwr_core():
 
     return model
 
+
 ##########################################
 # plt.plot(sp.k_generation)
 # plt.plot(sp.entropy)
@@ -835,7 +832,7 @@ def statepoint_evaluation(statepoint_file, desired_score=''):
     axial_dfs = []
 
     for i in range(1):
-        score_df = score_df[score_df['mesh 1']['z'] == i+1]
+        score_df = score_df[score_df['mesh 1']['z'] == i + 1]
         print(score_df.head(1000).to_string())
         x = score_df['mesh 1']['x']
         y = score_df['mesh 1']['y']
@@ -877,10 +874,10 @@ if plot:
                          )]
 
     layout_1 = dict(title='Test',
-                  width=1500,
-                  height=1000,
-                  xaxis=dict(type='log'),
-                  yaxis=dict(type='log'),
+                    width=1500,
+                    height=1000,
+                    xaxis=dict(type='log'),
+                    yaxis=dict(type='log'),
                     )
 
     figure_1 = dict(data=data_1, layout=layout_1)
@@ -889,11 +886,11 @@ if plot:
     ##################################################################
     # Instantiate Data
     data = [go.Surface(
-                        # z=np.zeros(np.shape(axial_dfs[0])),
-                        z=axial_dfs[0],
-                        surfacecolor=axial_dfs[0],
-                        colorscale='RdBu',
-                        )]
+        # z=np.zeros(np.shape(axial_dfs[0])),
+        z=axial_dfs[0],
+        surfacecolor=axial_dfs[0],
+        colorscale='RdBu',
+    )]
 
     # Layout
     layout = dict(title='Test',
@@ -901,9 +898,9 @@ if plot:
                   width=1500,
                   height=1000,
                   scene=dict(
-                        # xaxis=dict(range=[-10, 100]),
-                        # yaxis=dict(range=[-10, 100]),
-                        zaxis=dict(range=[0, .005])),
+                      # xaxis=dict(range=[-10, 100]),
+                      # yaxis=dict(range=[-10, 100]),
+                      zaxis=dict(range=[0, .005])),
                   )
 
     figure = dict(data=data, layout=layout)

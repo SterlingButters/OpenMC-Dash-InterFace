@@ -31,7 +31,7 @@ app.layout = html.Div([
     dcc.Store(id='injection-stores', storage_type='session'),
     dcc.Store(id='temp-assembly-stores', storage_type='session'),
     dcc.Store(id='assembly-stores', storage_type='session'),
-    dcc.Store(id='boundary-stores', storage_type='session'),
+    dcc.Store(id='geometry-stores', storage_type='session'),
     # Mesh
     dcc.Store(id='mesh-stores', storage_type='session'),
     # Scores

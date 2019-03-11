@@ -175,11 +175,17 @@ layout = html.Div([
         display='table',
     ),
     ),
+    html.Br(),
     dcc.Input(id='assembly-name', placeholder='Enter Assembly Name', size=70, type='text'),
     html.Button('Store Assembly', id='store-assembly-btn', n_clicks=0),
     html.Div(style=dict(height=30)),
 
     ################################################################################
+    html.P('Pick root geometry from Dropdown'),
+    dcc.Dropdown(id='root-dropdown'),
+
+    ################################################################################
+
     html.H3('Boundaries'),
     html.P("""
         In this section you will define the bounds for the simulation. Your model will 
@@ -292,8 +298,7 @@ layout = html.Div([
         display='table',
     ),
     ),
-
-    html.Button('Submit Geometrical Boundaries to Memory', id='submit-boundaries-btn')
+    html.Button('Submit Geometrical Boundaries to Memory', id='submit-geometry-btn')
 ])
 
 
@@ -498,7 +503,7 @@ def store_cell(clicks, name, planes, x_pitch, y_pitch, materials, colors, data):
                                          'materials': materials,
                                          'colors': colors}})
 
-        print(data)
+        # print(data)
         return data
 
 
@@ -777,21 +782,64 @@ def store_to_assemblies(click, assembly_name, assembly_data, all_assembly_data):
 
 
 #######################################################################################################################
+# Root Geometry Selection
+@app.callback(
+    Output('root-dropdown', 'options'),
+    [Input('cell-stores', 'data'),
+     Input('assembly-stores', 'data')]
+)
+def populate_dropdown(cell_data, assembly_data):
+    options = []
+    if cell_data:
+        for cell_name in cell_data.keys():
+            options.append({'label': cell_name, 'value': cell_name})
+
+    if assembly_data:
+        for assembly_name in assembly_data.keys():
+            options.append({'label': assembly_name, 'value': assembly_name})
+
+    return options
+
+
+#######################################################################################################################
 # Boundaries
+@app.callback(
+    Output('boundary-range-x', 'value'),
+    [Input('root-dropdown', 'value')],
+    [State('cell-stores', 'data')]
+)
+def set_x_boundary(root_geometry, cell_data):
+    if cell_data and root_geometry:
+        return [-cell_data[root_geometry]['x-pitch'], cell_data[root_geometry]['x-pitch']]
+
+
+@app.callback(
+    Output('boundary-range-y', 'value'),
+    [Input('root-dropdown', 'value')],
+    [State('cell-stores', 'data')]
+)
+def set_x_boundary(root_geometry, cell_data):
+    if cell_data and root_geometry:
+        return [-cell_data[root_geometry]['x-pitch'], cell_data[root_geometry]['x-pitch']]
+
+# TODO: Callback to change boundaries to root geometry for assembly ...
+###############################################
+
 
 # Store whole-geometry outer boundary and type
 @app.callback(
-    Output('boundary-stores', 'data'),
-    [Input('submit-boundaries-btn', 'n_clicks')],
-    [State('boundary-range-x', 'value'),
+    Output('geometry-stores', 'data'),
+    [Input('submit-geometry-btn', 'n_clicks')],
+    [State('root-dropdown', 'value'),
+     State('boundary-range-x', 'value'),
      State('boundary-range-y', 'value'),
      State('boundary-range-z', 'value'),
      State('boundary-type-x', 'value'),
      State('boundary-type-y', 'value'),
      State('boundary-type-z', 'value'),
-     State('boundary-stores', 'data')])
-def set_boundaries(clicks, range_x, range_y, range_z, btype_x, btype_y, btype_z, boundary_data):
-    boundary_data = boundary_data or {}
+     State('geometry-stores', 'data')])
+def store_boundaries(clicks, root_geometry, range_x, range_y, range_z, btype_x, btype_y, btype_z, geometry_data):
+    geometry_data = geometry_data or {}
     if clicks:
         min_x = range_x[0]
         max_x = range_x[1]
@@ -800,8 +848,9 @@ def set_boundaries(clicks, range_x, range_y, range_z, btype_x, btype_y, btype_z,
         min_z = range_z[0]
         max_z = range_z[1]
 
-        boundary_data.update({'X-min': min_x, 'X-max': max_x, 'X-btype': btype_x,
+        geometry_data.update({'root-geometry': root_geometry,
+                              'X-min': min_x, 'X-max': max_x, 'X-btype': btype_x,
                               'Y-min': min_y, 'Y-max': max_y, 'Y-btype': btype_y,
                               'Z-min': min_z, 'Z-max': max_z, 'Z-btype': btype_z})
 
-    return boundary_data
+    return geometry_data

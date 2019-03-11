@@ -263,6 +263,7 @@ layout = html.Div([
 #######################################################################################################################
 # Mesh Interface
 
+# TODO: Allow unlimited creation of meshes but limit applicable filters to 1 energy & 1 spatial
 @app.callback(
     Output('mesh-stores', 'data'),
     [Input('submit-mesh-button', 'n_clicks')],

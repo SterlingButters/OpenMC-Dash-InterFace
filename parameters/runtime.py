@@ -1,20 +1,18 @@
+import io
+import json
+import os
+import time
+from contextlib import redirect_stdout
+from glob import glob
+from shutil import copyfile
+
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Output, State, Input
-
-import openmc
-import openmc.model
-import openmc.mgxs
-
 import numpy as np
-import time
-import io
-from glob import glob
-import os
-from shutil import copyfile
-from contextlib import redirect_stdout
-
-import json
+import openmc
+import openmc.mgxs
+import openmc.model
+from dash.dependencies import Output, State, Input
 
 from app import app
 
@@ -33,8 +31,6 @@ layout = html.Div([
             }), html.Br(),
 
     #############################################################################
-    html.P('Pick root geometry from Dropdown'),
-    dcc.Dropdown(id='root-dropdown'),
     html.Button('Generate XML Files', id='xml-button', n_clicks=0),
 
     # Loading/Writing XML Files
@@ -125,24 +121,6 @@ layout = html.Div([
     ),
     ),
 ])
-
-
-############################################################################################################
-@app.callback(
-Output('root-dropdown', 'options'),
-[Input('cell-stores', 'data'),
- Input('assembly-stores', 'data')]
-)
-def populate_dropdown(cell_data, assembly_data):
-    options = []
-    for cell_name in cell_data.keys():
-        options.append({'label': cell_name, 'value': cell_name})
-
-    for assembly_name in assembly_data.keys():
-        options.append({'label': assembly_name, 'value': assembly_name})
-
-    print("Root Dropdown options:", options)
-    return options
 
 ############################################################################################################
 
@@ -299,9 +277,7 @@ def write_material_xml_contents(write_click, contents):
     Output('memory-display', 'children'),
     [Input('xml-button', 'n_clicks')],
 
-    [State('root-dropdown', 'value'),
-
-     State('material-stores', 'data'),
+    [State('material-stores', 'data'),
 
      State('cell-stores', 'data'),
      State('assembly-stores', 'data'),
@@ -313,19 +289,20 @@ def write_material_xml_contents(write_click, contents):
 
      State('settings-stores', 'data')]
 )
-def build_model(click, root_geometry, material_data, cell_data, assembly_data, boundary_data, mesh_data, score_data, settings_data):
+def build_model(click, material_data, cell_data, assembly_data, geometry_data, mesh_data, score_data,
+                settings_data):
     if click:
         model = openmc.model.Model()
 
-        print(material_data)
-        print(cell_data)
-        print(assembly_data)
-        print(boundary_data)
-        print(score_data)
-        print(json.dumps(settings_data, indent=2))
+        # print(json.dumps(material_data, indent=2))
+        # print(json.dumps(cell_data, indent=2))
+        # print(json.dumps(assembly_data, indent=2))
+        # print(json.dumps(boundary_data, indent=2))
+        print(json.dumps(score_data, indent=2))
+        # print(json.dumps(settings_data, indent=2))
 
         #######################################
-        # Materials
+        # Materials DONE
 
         MATERIALS = openmc.Materials([])
         for material_name in material_data.keys():
@@ -362,6 +339,7 @@ def build_model(click, root_geometry, material_data, cell_data, assembly_data, b
         # Geometry
 
         # Determine whether root geometry is a cell or an assembly
+        root_geometry = geometry_data['root-geometry']
         if root_geometry in cell_data.keys():
             # Pin Cell
             pitch_x = cell_data[root_geometry]['x-pitch']
@@ -372,7 +350,6 @@ def build_model(click, root_geometry, material_data, cell_data, assembly_data, b
             for r in range(len(radii)):
                 cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=radii[r], name='{} Outer Radius'.format(material_data.keys()[r])))
 
-            # TODO: Change to total geometrical boundaries but use callback to make it nice
             left = openmc.XPlane(x0=-pitch_x / 2, name='left', boundary_type='reflective')
             right = openmc.XPlane(x0=pitch_x / 2, name='right', boundary_type='reflective')
             bottom = openmc.YPlane(y0=-pitch_y / 2, name='bottom', boundary_type='reflective')
@@ -461,19 +438,19 @@ def build_model(click, root_geometry, material_data, cell_data, assembly_data, b
 
         # energy_mesh = openmc.Mesh()
         for filter in score_data['filters']:
-            if mesh_data[filter]['type'] == 'spatial':
-                dim_x = mesh_data[filter]['x-resolution']
-                dim_y = mesh_data[filter]['y-resolution']
-                dim_z = mesh_data[filter]['z-resolution']
-                width = mesh_data[filter]['width']
-                depth = mesh_data[filter]['depth']
-                height = mesh_data[filter]['height']
+            if filter['type'] == 'spatial':
+                dim_x = filter['x-resolution']
+                dim_y = filter['y-resolution']
+                dim_z = filter['z-resolution']
+                width = filter['width']
+                depth = filter['depth']
+                height = filter['height']
                 spatial_mesh.dimension = [dim_x, dim_y, dim_z]
                 spatial_mesh.lower_left = [-width / 2, -depth / 2, -height / 2]
                 spatial_mesh.width = [width / dim_x, depth / dim_y, height / dim_z]
 
             # if mesh_data[filter_name]['type'] == 'energy':
-                # TODO
+            # TODO
 
         # Create a mesh filter
         mesh_filter = openmc.MeshFilter(spatial_mesh)
@@ -524,6 +501,7 @@ def build_model(click, root_geometry, material_data, cell_data, assembly_data, b
         # model.settings.verbosity = settings_data['']
 
         return html.P('Success')
+
 
 #######################################################################################################################
 
