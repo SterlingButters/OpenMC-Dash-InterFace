@@ -17,7 +17,7 @@ merely get a UI working for your average joe or NUEN B.S. college student, then 
 are made. 
 
 ## Current Deployment Issues
-- Cross-sections library environment variable
+- Cross-sections library upload + environment variable
 
 ### Current release TODO List
 ##### Geometry:
