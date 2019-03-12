@@ -483,6 +483,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         model.settings.seed = settings_data['seed']
         model.settings.source = openmc.Source(space=openmc.stats.Box(
             [-pitch_x/2, -pitch_y/2, 1.0], [pitch_x/2, pitch_y/2, 1.0]))
+        model.settings.cross_sections = '/nndc_hdf5/cross_sections.xml'
         # model.settings.run_mode = settings_data['run-mode']
         # model.settings.energy_mode = settings_data['']
         # model.settings.cutoff = settings_data['']

@@ -55,7 +55,6 @@ layout = html.Div([
     # restore_object('model').settings.entropy_mesh = openmc.mesh
     # max_order = None or int
     # multipole_library = 'path'
-    # cross_sections = '/cross-sections/cross_sections.xml'
     html.H4('Temperature'),
     dcc.Dropdown(id='temperature-mode', options=[
         {'label': 'Default', 'value': 'default'},
