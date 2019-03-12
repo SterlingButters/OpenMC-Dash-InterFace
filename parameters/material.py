@@ -365,18 +365,107 @@ def choose_element(clickData):
 )
 def submit_isotope(mat_click, iso_click, material_name, material_density, material_temperature, selected_material,
                    clickData, mass, composition_option, percent_composition, material_data):
-    material_data = material_data or {}
+    # material_data = material_data or {}
+    material_data = material_data or {
+                                      "Fuel": {
+                                        "density": 10.29769,
+                                        "temperature": 250,
+                                        "elements": [
+                                          "U",
+                                          "U",
+                                          "U",
+                                          "O"
+                                        ],
+                                        "masses": [
+                                          234,
+                                          235,
+                                          238,
+                                          16
+                                        ],
+                                        "compositions": [
+                                          .0000044843,
+                                          .00055815,
+                                          .022408,
+                                          .045829
+                                        ],
+                                        "types": [
+                                          "ao",
+                                          "ao",
+                                          "ao",
+                                          "ao"
+                                        ]
+                                      },
+                                      "Clad": {
+                                        "density": 6.55,
+                                        "temperature": 200,
+                                        "elements": [
+                                          "Zr",
+                                          "Zr",
+                                          "Zr",
+                                          "Zr",
+                                          "Zr"
+                                        ],
+                                        "masses": [
+                                          90,
+                                          91,
+                                          92,
+                                          94,
+                                          96
+                                        ],
+                                        "compositions": [
+                                          .021827,
+                                          .0047600,
+                                          .0072758,
+                                          .0073734,
+                                          .0011879
+                                        ],
+                                        "types": [
+                                          "ao",
+                                          "ao",
+                                          "ao",
+                                          "ao",
+                                          "ao"
+                                        ]
+                                      },
+                                      "Water": {
+                                        "density": 0.740582,
+                                        "temperature": 200,
+                                        "elements": [
+                                          "H",
+                                          "O",
+                                          "B",
+                                          "B"
+                                        ],
+                                        "masses": [
+                                          1,
+                                          16,
+                                          10,
+                                          11
+                                        ],
+                                        "compositions": [
+                                          .049457,
+                                          .024672,
+                                          .0000080042,
+                                          .000032218
+                                        ],
+                                        "types": [
+                                          "ao",
+                                          "ao",
+                                          "ao",
+                                          "ao"
+                                        ]
+                                      },
+                                    }
 
     if mat_click > iso_click:
         if None in [material_name, material_density, material_temperature]:
-            print(material_name, material_density, material_temperature)
             print("A Material Parameter remains Unfilled")
         else:
             material_data.update({'{}'.format(material_name):
                                       {'density': material_density,
                                        'temperature': material_temperature}
                                   })
-
+        print(material_data)
         return material_data
 
     if iso_click > mat_click:
@@ -423,7 +512,7 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
              'compositions': compositions,
              'types': types}
         )
-
+        print(material_data)
         return material_data
 
 
@@ -437,7 +526,6 @@ def tabulate_materials(timestamp, data):
     if timestamp is None:
         raise PreventUpdate
 
-    print(json.dumps(data, indent=2))
     df = pd.DataFrame.from_dict(data)
     # https://plot.ly/python/figure-factory/table/
     table = ff.create_table(df)

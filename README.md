@@ -17,12 +17,7 @@ merely get a UI working for your average joe or NUEN B.S. college student, then 
 are made. 
 
 ## Current Deployment Issues
-- Need to force use of `Agg` for all `matplotlib` instances in heroku
-    - https://github.com/matplotlib/matplotlib/issues/9954/
-    - Potential Solutions:
-        - Fork `OpenMC` and create pip package
-        - Use `Agg` at top level to force subsequent uses
-            - Produces Heroku SyntaxError: https://stackoverflow.com/questions/55092705/gunicorn-syntaxerror-in-heroku-build?noredirect=1#comment96929939_55092705
+- Cross-sections library environment variable
 
 ### Current release TODO List
 ##### Geometry:

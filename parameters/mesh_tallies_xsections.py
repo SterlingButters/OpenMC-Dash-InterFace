@@ -1,3 +1,5 @@
+import json
+
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Output, State, Input
@@ -273,7 +275,7 @@ layout = html.Div([
      State('mesh-x-slider', 'value'),
      State('mesh-y-slider', 'value'),
      State('mesh-z-slider', 'value'),
-     State('boundary-stores', 'data'),
+     State('geometry-stores', 'data'),
      State('mesh-stores', 'data')])
 def mesh_creation(click, mesh_name, mesh_type, energy_resolution, x_resolution, y_resolution, z_resolution,
                   boundary_data,
@@ -344,7 +346,6 @@ def store_scores(click, mesh_filters, scores1, scores2, scores3, scores4, mesh_d
         score_data.update({'filters': [mesh_data[mesh_filter] for mesh_filter in mesh_filters],
                            'scores': scores})
 
-        print(score_data)
     return score_data
 
 
