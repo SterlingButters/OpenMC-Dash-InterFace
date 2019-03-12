@@ -514,7 +514,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         # model.settings.trace = tuple or list
         # model.settings.track = tuple or list
 
-        print("About to export")
+        print("Exporting to xml...")
         model.export_to_xml()
         return html.P('Success')
 
@@ -526,19 +526,18 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
     Output('console-output', 'value'),
     [Input('run-button', 'n_clicks')], )
 def run_model(click):
-    if int(click) > 0:
+    if click:
 
         script_dir = os.path.dirname(__file__)
-        xml_path_src = os.path.join(script_dir, '../xml-files/')
+        xml_path_src = os.path.join(script_dir, './parameters/')  # TODO: Change to './xml-files/' eventually
         xml_files_src = glob('{}*.xml'.format(xml_path_src))
 
         for file in xml_files_src:
             xml_file_name = os.path.basename(file)
-            copyfile(os.path.join(xml_path_src, xml_file_name), os.path.join(script_dir, xml_file_name))
+            copyfile(file, os.path.join(script_dir, xml_file_name))
+            os.remove(file)
 
-        xml_files_dst = glob('{}*.xml'.format(script_dir))
-        print(xml_files_dst)
-
+        xml_files_dst = glob('*.xml')
         all_files_exist = False
         while not all_files_exist:
             bool_array = []
@@ -547,7 +546,7 @@ def run_model(click):
                 if exists:
                     bool_array.append(exists)
 
-            if np.array(bool_array).all():
+            if np.array(bool_array).all() and len(xml_files_dst) > 0:
                 all_files_exist = True
                 print('All files exist')
 

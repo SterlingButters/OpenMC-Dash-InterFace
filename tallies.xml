@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='utf-8'?>
+<tallies>
+    <mesh id="1" type="regular">
+        <dimension>1000 1000 2</dimension>
+        <lower_left>-229.0 -229.0 -452</lower_left>
+        <width>0.458 0.458 226.0</width>
+    </mesh>
+    <tally id="10037">
+        <filter bins="1" type="mesh" />
+        <filter bins="0.001 19952623.149688788" type="energy" />
+        <nuclides>total</nuclides>
+        <scores>flux total kappa-fission inverse-velocity prompt-nu-fission nu-fission</scores>
+        <estimator>tracklength</estimator>
+    </tally>
+    <tally id="10024">
+        <filter bins="1" type="mesh" />
+        <filter bins="0.001 19952623.149688788" type="energy" />
+        <nuclides>total</nuclides>
+        <scores>flux prompt-nu-fission</scores>
+        <estimator>analog</estimator>
+    </tally>
+    <tally id="10025">
+        <filter bins="1" type="mesh" />
+        <filter bins="0.001 19952623.149688788" type="energyout" />
+        <nuclides>total</nuclides>
+        <scores>prompt-nu-fission scatter-1 nu-scatter-1</scores>
+        <estimator>analog</estimator>
+    </tally>
+    <tally id="10010">
+        <filter bins="1" type="mesh" />
+        <filter bins="0.001 19952623.149688788" type="energy" />
+        <filter bins="0.001 19952623.149688788" type="energyout" />
+        <nuclides>total</nuclides>
+        <scores>nu-scatter-0</scores>
+        <estimator>analog</estimator>
+    </tally>
+    <tally id="10030">
+        <filter bins="1" type="mesh" />
+        <filter bins="1 2 3 4 5 6" type="delayedgroup" />
+        <filter bins="0.001 19952623.149688788" type="energy" />
+        <nuclides>total</nuclides>
+        <scores>delayed-nu-fission</scores>
+        <estimator>analog</estimator>
+    </tally>
+    <tally id="10031">
+        <filter bins="1" type="mesh" />
+        <filter bins="1 2 3 4 5 6" type="delayedgroup" />
+        <filter bins="0.001 19952623.149688788" type="energyout" />
+        <nuclides>total</nuclides>
+        <scores>delayed-nu-fission</scores>
+        <estimator>analog</estimator>
+    </tally>
+    <tally id="10038">
+        <filter bins="1" type="mesh" />
+        <filter bins="1 2 3 4 5 6" type="delayedgroup" />
+        <filter bins="0.001 19952623.149688788" type="energy" />
+        <nuclides>total</nuclides>
+        <scores>delayed-nu-fission</scores>
+        <estimator>tracklength</estimator>
+    </tally>
+    <tally id="10039" name="Flux">
+        <filter bins="1" type="mesh" />
+        <scores>flux</scores>
+    </tally>
+</tallies>
