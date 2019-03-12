@@ -17,7 +17,7 @@ layout = html.Div([
                 'font-family': 'Dosis',
                 'display': 'inline',
                 'font-size': '4.0rem',
-                'color': '#4D637F'
+                'color': 'rgb(76, 1, 3)'
             }),
     html.Div(style=dict(height=20)),
 
@@ -43,17 +43,27 @@ layout = html.Div([
                              min=0,
                              max=5,
                              value=1.26,
-                             label='Cell Pitch',
+                             label='Pin Cell Pitch X',
                              labelPosition='top',
-                             size=200
+                             size=200,
+                             style=dict(float='left'),
                              ),
             daq.NumericInput(id='cell-pitch-y',
                              min=0,
                              max=5,
                              value=1.26,
-                             label='Cell Pitch',
+                             label='Pin Cell Pitch Y',
                              labelPosition='top',
-                             size=200
+                             size=200,
+                             style=dict(float='left'),
+                             ),
+            daq.NumericInput(id='cell-height',
+                             min=0,
+                             value=200,
+                             label='Pin Cell Height',
+                             labelPosition='top',
+                             size=200,
+                             style=dict(float='left'),
                              )
         ],
             style=dict(
@@ -146,6 +156,7 @@ layout = html.Div([
             dcc.Dropdown(id='injection-cell'),
             html.P("Selected Cells: "), html.Div(id='display-selected'),
             html.Button('Submit cell into selection(s)', id='submit-selected-btn'),
+
             # TODO: Link to Callback
             html.Div(id='cell-preview'),
         ],
@@ -468,11 +479,12 @@ def create_cell(planes, materials, colors):
      State('planes-list', 'value'),
      State('cell-pitch-x', 'value'),
      State('cell-pitch-y', 'value'),
+     State('cell-height', 'value'),
      State('material-dropdown', 'value'),
      State('colors-dropdown', 'value'),
      State('cell-stores', 'data')]
 )
-def store_cell(clicks, name, planes, x_pitch, y_pitch, materials, colors, data):
+def store_cell(clicks, name, planes, x_pitch, y_pitch, height, materials, colors, data):
     if clicks is None:
         raise PreventUpdate
 
@@ -499,6 +511,7 @@ def store_cell(clicks, name, planes, x_pitch, y_pitch, materials, colors, data):
     else:
         data.update({'{}'.format(name): {'x-pitch': x_pitch,
                                          'y-pitch': y_pitch,
+                                         'height': height,
                                          'radii': planes,
                                          'materials': materials,
                                          'colors': colors}})
@@ -810,7 +823,7 @@ def populate_dropdown(cell_data, assembly_data):
 )
 def set_x_boundary(root_geometry, cell_data):
     if cell_data and root_geometry:
-        return [-cell_data[root_geometry]['x-pitch'], cell_data[root_geometry]['x-pitch']]
+        return [-cell_data[root_geometry]['x-pitch']/2, cell_data[root_geometry]['x-pitch']/2]
 
 
 @app.callback(
@@ -820,9 +833,18 @@ def set_x_boundary(root_geometry, cell_data):
 )
 def set_x_boundary(root_geometry, cell_data):
     if cell_data and root_geometry:
-        return [-cell_data[root_geometry]['x-pitch'], cell_data[root_geometry]['x-pitch']]
+        return [-cell_data[root_geometry]['x-pitch']/2, cell_data[root_geometry]['x-pitch']/2]
 
-# TODO: Callback to change boundaries to root geometry for assembly ...
+
+@app.callback(
+    Output('boundary-range-z', 'value'),
+    [Input('root-dropdown', 'value')],
+    [State('cell-stores', 'data')]
+)
+def set_x_boundary(root_geometry, cell_data):
+    if cell_data and root_geometry:
+        return [-cell_data[root_geometry]['height']/2, cell_data[root_geometry]['height']/2]
+
 ###############################################
 
 

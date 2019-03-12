@@ -17,7 +17,7 @@ layout = html.Div([
                 'font-family': 'Dosis',
                 'display': 'inline',
                 'font-size': '4.0rem',
-                'color': '#4D637F'
+                'color': 'rgb(76, 1, 3)'
             }), html.Br(),
 
     html.P("""
@@ -71,7 +71,7 @@ layout = html.Div([
                    marks={i: i for i in range(0, 1000, 100)},
                    ),
         html.Br(),
-        dcc.Input(id='mesh-name', placeholder='Enter Mesh Name', type="text"),
+        dcc.Input(id='mesh-name', value='Cartesian', placeholder='Enter Mesh Name', type="text"),
         html.Button('Submit Mesh', id='submit-mesh-button', n_clicks=0),
     ]),
 
@@ -115,7 +115,7 @@ layout = html.Div([
                         {'label': 'Q Recoverable Fission', 'value': 'fission-q-recoverable'},
                         {'label': 'Decay Rate', 'value': 'decay-rate'},
                     ],
-                    values=['current', 'events', 'decay-rate', 'fission-q-recoverable'],
+                    values=[],
                     className='',  # TODO: Custom Style
                     labelStyle={'display': 'block'}
                 )
@@ -145,7 +145,7 @@ layout = html.Div([
                         {'label': 'Total-YN', 'value': 'total-YN'},
                         {'label': 'Flux-YN  ', 'value': 'flux-YN'},
                     ],
-                    values=['delayed-nu-fission', 'prompt-nu-fission'],
+                    values=[],
                     className='',  # TODO: Custom Style
                     labelStyle={'display': 'block'}
                 )

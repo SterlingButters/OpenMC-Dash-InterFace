@@ -16,7 +16,7 @@ layout = html.Div([
                 'font-family': 'Dosis',
                 'display': 'inline',
                 'font-size': '4.0rem',
-                'color': '#4D637F'
+                'color': 'rgb(76, 1, 3)'
             }),
 
     html.Br(),
@@ -46,6 +46,11 @@ layout = html.Div([
         {'label': 'Multi-Group', 'value': 'multi-group'},
     ]),
     html.H6('Cutoff'),
+    # Dictionary defining weight cutoff and energy cutoff.The dictionary may have three
+    # keys, ‘weight’, ‘weight_avg’ and ‘energy’.Value for ‘weight’ should be a float indicating weight
+    # cutoff below which particle undergo Russian roulette.Value for ‘weight_avg’ should be a float indicating
+    # weight assigned to particles that are not killed after Russian roulette.Value of energy should be a float
+    # indicating energy in eV below which particle will be killed.
     dcc.Dropdown(id='cutoff', options=[
         {'label': 'Weight', 'value': 'weight'},
         {'label': 'Average Weight', 'value': 'weight_avg'},
@@ -55,7 +60,15 @@ layout = html.Div([
     # restore_object('model').settings.entropy_mesh = openmc.mesh
     # max_order = None or int
     # multipole_library = 'path'
+
     html.H4('Temperature'),
+    # Dictionary that efines a default temperature and method for treating intermediate temperatures at which nuclear
+    # data doesn’t exist. Accepted keys are ‘default’, ‘method’, ‘range’, ‘tolerance’, and ‘multipole’. The value for
+    # ‘default’ should be a float representing the default temperature in Kelvin. The value for ‘method’ should be
+    # ‘nearest’ or ‘interpolation’. If the method is ‘nearest’, ‘tolerance’ indicates a range of temperature within
+    # which cross sections may be used. The value for ‘range’ should be a pair a minimum and maximum temperatures which
+    # are used to indicate that cross sections be loaded at all temperatures within the range. ‘multipole’ is a boolean
+    # indicating whether or not the windowed multipole method should be used to evaluate resolved resonance cross sections.
     dcc.Dropdown(id='temperature-mode', options=[
         {'label': 'Default', 'value': 'default'},
         {'label': 'Method', 'value': 'method'},
@@ -80,19 +93,17 @@ layout = html.Div([
     # volume_calculations = iterable of VolumeCalculation
     # resonance_scattering = dict
 
+    # tabular_legendre (dict) – Determines if a multi-group scattering moment kernel expanded via Legendre polynomials
+    # is to be converted to a tabular distribution or not. Accepted keys are ‘enable’ and ‘num_points’. The value for
+    # ‘enable’ is a bool stating whether the conversion to tabular is performed; the value for ‘num_points’ sets the
+    # number of points to use in the tabular distribution, should ‘enable’ be True.
+
     html.H4('Outputs'),
     daq.BooleanSwitch(id='output-cross-sections', label='Output Cross-Sections', labelPosition='right', on=True),
     daq.BooleanSwitch(id='output-summary', label='Output Summary', labelPosition='right', on=True),
     daq.BooleanSwitch(id='output-tallies', label='Output Tallies', labelPosition='right', on=True),
     daq.BooleanSwitch(id='cross-sections', label='Output Cross-Sections', labelPosition='right', on=True),
     dcc.Slider(id='verbosity', min=0, max=10, step=1, value=5),
-
-    # restore_object('model').settings.source = Iterable of openmc.Source
-    # restore_object('model').settings.state_point = dict
-    # restore_object('model').settings.source_point = dict
-    # restore_object('model').settings.threads = int
-    # restore_object('model').settings.trace = tuple or list
-    # restore_object('model').settings.track = tuple or list
 
     html.Button('Submit Settings to Memory', id='submit-settings-btn', n_clicks=0)
 ]),

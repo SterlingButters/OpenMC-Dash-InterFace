@@ -27,7 +27,7 @@ layout = html.Div([
                 'font-family': 'Dosis',
                 'display': 'inline',
                 'font-size': '4.0rem',
-                'color': '#4D637F'
+                'color': 'rgb(76, 1, 3)'
             }), html.Br(),
 
     #############################################################################
@@ -303,12 +303,11 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
 
         MATERIALS = openmc.Materials([])
         for material_name in material_data.keys():
-            density = material_data[material_name]['density']
-            temperature = material_data[material_name]['temperature']
-
             mat_object = openmc.Material(name=material_name)
-            mat_object.set_density('g/cm3', density)
-            mat_object.temperature = temperature
+
+            if 'temperature' in list(material_data[material_name].keys()) and material_data[material_name]['temperature'] != 0:
+                mat_object.temperature = material_data[material_name]['temperature']
+            mat_object.set_density('g/cm3', material_data[material_name]['density'])
             mat_object.depletable = False
 
             elements = material_data[material_name]['elements']
@@ -324,13 +323,16 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
                                            # enrichment=None
                                            )
                 else:
-                    mat_object.add_nuclide(nuclide=str(masses[i])+elements[i],
+                    mat_object.add_nuclide(nuclide=elements[i]+str(masses[i]),
                                            percent=compositions[i],
                                            percent_type=types[i])
 
             MATERIALS.append(mat_object)
 
         model.materials = MATERIALS
+        script_dir = os.path.dirname(__file__)
+        xsections_file = os.path.join(script_dir, '../nndc_hdf5/cross_sections.xml')
+        model.materials.cross_sections = xsections_file
 
         #######################################
         # Geometry
@@ -341,16 +343,19 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             # Pin Cell
             pitch_x = cell_data[root_geometry]['x-pitch']
             pitch_y = cell_data[root_geometry]['y-pitch']
+            height_z = cell_data[root_geometry]['height']
 
             cylinders = []
             radii = cell_data[root_geometry]['radii']
             for r in range(len(radii)):
                 cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=radii[r], name='{} Outer Radius'.format(list(material_data.keys())[r])))
 
-            left = openmc.XPlane(x0=-pitch_x / 2, name='left', boundary_type='reflective')
-            right = openmc.XPlane(x0=pitch_x / 2, name='right', boundary_type='reflective')
-            bottom = openmc.YPlane(y0=-pitch_y / 2, name='bottom', boundary_type='reflective')
-            top = openmc.YPlane(y0=pitch_y / 2, name='top', boundary_type='reflective')
+            x_neg = openmc.XPlane(x0=-pitch_x / 2, name='x-neg', boundary_type='reflective')
+            x_pos = openmc.XPlane(x0=pitch_x / 2, name='x-pos', boundary_type='reflective')
+            y_neg = openmc.YPlane(y0=-pitch_y / 2, name='y-neg', boundary_type='reflective')
+            y_pos = openmc.YPlane(y0=pitch_y / 2, name='y-pos', boundary_type='reflective')
+            bottom = openmc.ZPlane(z0=-height_z / 2, name='z-neg', boundary_type='reflective')
+            top = openmc.ZPlane(z0=height_z / 2, name='z-pos', boundary_type='reflective')
 
             # Instantiate Cells
             CELLS = []
@@ -361,9 +366,11 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             # Use surface half-spaces to define regions
             for c in range(len(cylinders)):
                 if c == 0:
-                    CELLS[c].region = -cylinders[c]
-                elif c == len(cylinders):
-                    CELLS[c].region = +cylinders[c] & +left & -right & +bottom & -top
+                    CELLS[c].region = -cylinders[c] & +bottom & -top
+                elif c == len(cylinders)-1:
+                    CELLS[c].region = +cylinders[c] & +x_neg & -x_pos & +y_neg & -y_pos & +bottom & -top
+                else:
+                    CELLS[c].region = +cylinders[c] & -cylinders[c+1] & +bottom & -top
 
             # Create root universe
             model.geometry.root_universe = openmc.Universe(0, name='Root Universe')
@@ -482,8 +489,8 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         model.settings.generations_per_batch = settings_data['gens-per-batch']
         model.settings.seed = settings_data['seed']
         model.settings.source = openmc.Source(space=openmc.stats.Box(
-            [-pitch_x/2, -pitch_y/2, 1.0], [pitch_x/2, pitch_y/2, 1.0]))
-        model.settings.cross_sections = '/nndc_hdf5/cross_sections.xml'
+            [-pitch_x/2, -pitch_y/2, -height_z/2], [pitch_x/2, pitch_y/2, height_z/2]))
+
         # model.settings.run_mode = settings_data['run-mode']
         # model.settings.energy_mode = settings_data['']
         # model.settings.cutoff = settings_data['']
@@ -499,6 +506,13 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         # model.settings.output.tallies = settings_data['']
         # model.settings.output.cross_sections = settings_data['']
         # model.settings.verbosity = settings_data['']
+
+        # model.settings.source = Iterable of openmc.Source
+        # model.settings.state_point = dict
+        # model.settings.source_point = dict
+        # model.settings.threads = int
+        # model.settings.trace = tuple or list
+        # model.settings.track = tuple or list
 
         print("About to export")
         model.export_to_xml()
@@ -525,8 +539,8 @@ def run_model(click):
         xml_files_dst = glob('{}*.xml'.format(script_dir))
         print(xml_files_dst)
 
-        pass_test = False
-        while not pass_test:
+        all_files_exist = False
+        while not all_files_exist:
             bool_array = []
             for file in range(len(xml_files_dst)):
                 exists = os.path.exists(xml_files_dst[file])
@@ -534,7 +548,7 @@ def run_model(click):
                     bool_array.append(exists)
 
             if np.array(bool_array).all():
-                pass_test = True
+                all_files_exist = True
                 print('All files exist')
 
             time.sleep(1)

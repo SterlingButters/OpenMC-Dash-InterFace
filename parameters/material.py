@@ -153,7 +153,7 @@ layout = html.Div([
                 'font-family': 'Dosis',
                 'display': 'inline',
                 'font-size': '4.0rem',
-                'color': '#4D637F'
+                'color': 'rgb(76, 1, 3)'
             }),
 
     html.Br(),
@@ -182,7 +182,7 @@ layout = html.Div([
                                 value=10.1,
                                 label='Material Density',
                                 labelPosition='top',
-                                size=200
+                                size=200,
                             ),
                             daq.NumericInput(
                                 id='material-temperature',
@@ -369,7 +369,7 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
     material_data = material_data or {
                                       "Fuel": {
                                         "density": 10.29769,
-                                        "temperature": 250,
+                                        # "temperature": 1200,
                                         "elements": [
                                           "U",
                                           "U",
@@ -397,7 +397,7 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
                                       },
                                       "Clad": {
                                         "density": 6.55,
-                                        "temperature": 200,
+                                        # "temperature": 900,
                                         "elements": [
                                           "Zr",
                                           "Zr",
@@ -429,7 +429,7 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
                                       },
                                       "Water": {
                                         "density": 0.740582,
-                                        "temperature": 200,
+                                        # "temperature": 700,
                                         "elements": [
                                           "H",
                                           "O",
@@ -458,7 +458,7 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
                                     }
 
     if mat_click > iso_click:
-        if None in [material_name, material_density, material_temperature]:
+        if None in [material_name, material_density]:
             print("A Material Parameter remains Unfilled")
         else:
             material_data.update({'{}'.format(material_name):

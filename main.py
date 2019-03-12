@@ -15,14 +15,13 @@ app.layout = html.Div([
         style={
             'height': '140',
             'width': '800',
-            'float': 'right',
             'position': 'relative',
         },
-    ),
-
-    dcc.Location(id='url', refresh=False, pathname='/parameters/material'),
+    ), html.Br(), html.Br(), html.Br(), html.Br(), html.Br(), html.Br(), html.Br(), html.Br(),
 
     # TODO: Storage data not persist through pathname change -> storage_type to 'memory' has no effect
+    #  Tabs dont load callbacks, only layouts?
+
     # Materials
     dcc.Store(id='material-stores', storage_type='session'),
     # Geometry
@@ -41,40 +40,40 @@ app.layout = html.Div([
     # Settings
     dcc.Store(id='settings-stores', storage_type='session'),
 
-    dcc.Link('Materials', href='/parameters/material'), html.Br(),
-    dcc.Link('Geometry', href='/parameters/geometry'), html.Br(),
-    dcc.Link('Mesh & Tallies & Cross-Sections', href='/parameters/mesh_tallies_xsections'), html.Br(),
-    dcc.Link('Settings', href='/parameters/settings'), html.Br(),
-    dcc.Link('Verification & Run', href='/parameters/runtime'), html.Br(),
-    dcc.Link('Postprocessing', href='/parameters/postprocessing'), html.Br(),
+    dcc.Tabs(id="tabs", value='materials', children=[
+        dcc.Tab(label='Materials', value='materials'),
+        dcc.Tab(label='Geometry', value='geometry'),
+        dcc.Tab(label='Mesh, Tallies, and Cross-Sections', value='mesh-tallies-xsections'),
+        dcc.Tab(label='Settings', value='settings'),
+        dcc.Tab(label='Verification & Run', value='runtime'),
+        dcc.Tab(label='PostProcessing', value='postprocessing'),
+    ]),
 
     html.Div(id='page-content'),
 ])
 
 
 @app.callback(Output('page-content', 'children'),
-              [Input('url', 'pathname')])
-def display_page(pathname):
-    if pathname == '/parameters/material':
+              [Input('tabs', 'value')])
+def display_page(tab):
+
+    if tab == 'materials':
         return material.layout
 
-    elif pathname == '/parameters/geometry':
+    elif tab == 'geometry':
         return geometry.layout
 
-    elif pathname == '/parameters/settings':
+    elif tab == 'settings':
         return settings.layout
 
-    elif pathname == '/parameters/mesh_tallies_xsections':
+    elif tab == 'mesh-tallies-xsections':
         return mesh_tallies_xsections.layout
 
-    elif pathname == '/parameters/runtime':
+    elif tab == 'runtime':
         return runtime.layout
 
-    elif pathname == '/parameters/postprocessing':
+    elif tab == 'postprocessing':
         return postprocessing.layout
-
-    else:
-        return '404 Page not Found'
 
 
 if __name__ == '__main__':

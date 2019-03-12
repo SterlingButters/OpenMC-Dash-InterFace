@@ -18,6 +18,7 @@ are made.
 
 ## Current Deployment Issues
 - Cross-sections library upload + environment variable
+https://devcenter.heroku.com/articles/s3
 
 ### Current release TODO List
 ##### Geometry:
