@@ -281,25 +281,22 @@ def write_material_xml_contents(write_click, contents):
 
      State('cell-stores', 'data'),
      State('assembly-stores', 'data'),
-     State('boundary-stores', 'data'),
-
-     State('mesh-stores', 'data'),
+     State('geometry-stores', 'data'),
 
      State('mesh-score-stores', 'data'),
 
      State('settings-stores', 'data')]
 )
-def build_model(click, material_data, cell_data, assembly_data, geometry_data, mesh_data, score_data,
-                settings_data):
+def build_model(click, material_data, cell_data, assembly_data, geometry_data, score_data, settings_data):
     if click:
         model = openmc.model.Model()
 
-        # print(json.dumps(material_data, indent=2))
-        # print(json.dumps(cell_data, indent=2))
-        # print(json.dumps(assembly_data, indent=2))
-        # print(json.dumps(boundary_data, indent=2))
+        print(json.dumps(material_data, indent=2))
+        print(json.dumps(cell_data, indent=2))
+        print(json.dumps(assembly_data, indent=2))
+        print(json.dumps(geometry_data, indent=2))
         print(json.dumps(score_data, indent=2))
-        # print(json.dumps(settings_data, indent=2))
+        print(json.dumps(settings_data, indent=2))
 
         #######################################
         # Materials DONE
@@ -320,7 +317,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, m
             types = material_data[material_name]['types']
 
             for i in range(len(elements)):
-                if float(masses[i]).is_integer() or masses[i] == 0:
+                if not float(masses[i]).is_integer() or masses[i] == 0:
                     mat_object.add_element(element=elements[i],
                                            percent=compositions[i],
                                            percent_type=types[i],
@@ -348,7 +345,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, m
             cylinders = []
             radii = cell_data[root_geometry]['radii']
             for r in range(len(radii)):
-                cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=radii[r], name='{} Outer Radius'.format(material_data.keys()[r])))
+                cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=radii[r], name='{} Outer Radius'.format(list(material_data.keys())[r])))
 
             left = openmc.XPlane(x0=-pitch_x / 2, name='left', boundary_type='reflective')
             right = openmc.XPlane(x0=pitch_x / 2, name='right', boundary_type='reflective')
@@ -358,7 +355,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, m
             # Instantiate Cells
             CELLS = []
             for m in range(len(MATERIALS)):
-                cell = openmc.Cell(name='{}'.format(material_data.keys()[m]), fill=MATERIALS[m])
+                cell = openmc.Cell(name='{}'.format(list(material_data.keys())[m]), fill=MATERIALS[m])
                 CELLS.append(cell)
 
             # Use surface half-spaces to define regions
@@ -479,12 +476,14 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, m
 
         #######################################
         # Settings TODO: Check
-        model.settings.total_batches = settings_data['total-batches']
-        model.settings.inactive_batches = settings_data['inactive-batches']
+        model.settings.batches = settings_data['total-batches']
+        model.settings.inactive = settings_data['inactive-batches']
         model.settings.particles = settings_data['particles']
         model.settings.generations_per_batch = settings_data['gens-per-batch']
         model.settings.seed = settings_data['seed']
-        model.settings.run_mode = settings_data['run-mode']
+        model.settings.source = openmc.Source(space=openmc.stats.Box(
+            [-pitch_x/2, -pitch_y/2, 1.0], [pitch_x/2, pitch_y/2, 1.0]))
+        # model.settings.run_mode = settings_data['run-mode']
         # model.settings.energy_mode = settings_data['']
         # model.settings.cutoff = settings_data['']
         # model.settings.temperature = settings_data['']
@@ -500,6 +499,8 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, m
         # model.settings.output.cross_sections = settings_data['']
         # model.settings.verbosity = settings_data['']
 
+        print("About to export")
+        model.export_to_xml()
         return html.P('Success')
 
 
