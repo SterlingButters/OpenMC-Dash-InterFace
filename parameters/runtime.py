@@ -307,10 +307,12 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         # Materials DONE
 
         MATERIALS = openmc.Materials([])
+        MATERIALS_DICT = {}
         for material_name in material_data.keys():
             mat_object = openmc.Material(name=material_name)
 
-            if 'temperature' in list(material_data[material_name].keys()) and material_data[material_name]['temperature'] != 0:
+            if 'temperature' in list(material_data[material_name].keys()) and material_data[material_name][
+                'temperature'] != 0:
                 mat_object.temperature = material_data[material_name]['temperature']
             mat_object.set_density('g/cm3', material_data[material_name]['density'])
             mat_object.depletable = False
@@ -333,6 +335,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
                                            percent_type=types[i])
 
             MATERIALS.append(mat_object)
+            MATERIALS_DICT.update({'{}'.format(material_name): mat_object})
 
         model.materials = MATERIALS
         script_dir = os.path.dirname(__file__)
@@ -351,9 +354,9 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             height_z = cell_data[root_geometry]['height']
 
             cylinders = []
-            radii = cell_data[root_geometry]['radii']
-            for r in range(len(radii)):
-                cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=radii[r],
+            cell_radii = cell_data[root_geometry]['radii']
+            for r in range(len(cell_radii)):
+                cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=cell_radii[r],
                                                   name='{} Outer Radius'.format(list(material_data.keys())[r])))
 
             x_neg = openmc.XPlane(x0=-pitch_x / 2, name='x-neg', boundary_type='reflective')
@@ -365,8 +368,9 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
 
             # Instantiate Cells
             CELLS = []
-            for m in range(len(MATERIALS)):
-                cell = openmc.Cell(name='{}'.format(list(material_data.keys())[m]), fill=MATERIALS[m])
+            cell_materials = cell_data[root_geometry]['materials']
+            for m in range(len(cell_materials)):
+                cell = openmc.Cell(name='{}'.format(cell_materials[m]), fill=MATERIALS_DICT[cell_materials[m]])
                 CELLS.append(cell)
 
             # Use surface half-spaces to define regions
@@ -385,15 +389,11 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         # Assembly
         if root_geometry in assembly_data.keys():
             # Main Cell
-            dim_x = assembly_data[root_geometry]['main-cell']['x-pitch']*assembly_data[root_geometry]['assembly-metrics']['assembly-num-x']
-            dim_y = assembly_data[root_geometry]['main-cell']['y-pitch']*assembly_data[root_geometry]['assembly-metrics']['assembly-num-y']
-            dim_z = assembly_data[root_geometry]['main-cell']['height']
-
-            cylinders = []
-            radii = assembly_data[root_geometry]['main-cell']['radii']
-            for r in range(len(radii)):
-                cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=radii[r],
-                                                  name='{} Outer Radius'.format(list(material_data.keys())[r])))
+            dim_x = cell_data[assembly_data[root_geometry]['main-cell']]['x-pitch'] * \
+                    assembly_data[root_geometry]['assembly-metrics']['assembly-num-x']
+            dim_y = cell_data[assembly_data[root_geometry]['main-cell']]['y-pitch'] * \
+                    assembly_data[root_geometry]['assembly-metrics']['assembly-num-y']
+            dim_z = cell_data[assembly_data[root_geometry]['main-cell']]['height']
 
             # Create boundary planes to surround the geometry
             min_x = openmc.XPlane(x0=-dim_x / 2, boundary_type='reflective')
@@ -403,47 +403,82 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             min_z = openmc.ZPlane(z0=-dim_z / 2, boundary_type='reflective')
             max_z = openmc.ZPlane(z0=+dim_z / 2, boundary_type='reflective')
 
-        # Create a control rod guide tube universe
-        # guide_tube_universe = openmc.Universe(name='Guide Tube')
-        # gt_inner_cell = openmc.Cell(name='guide tube inner water', fill=hot_water,
-        #                             region=-fuel_or)
-        # gt_clad_cell = openmc.Cell(name='guide tube clad', fill=clad,
-        #                            region=+fuel_or & -clad_or)
-        # gt_outer_cell = openmc.Cell(name='guide tube outer water', fill=hot_water,
-        #                             region=+clad_or)
-        # guide_tube_universe.add_cells([gt_inner_cell, gt_clad_cell, gt_outer_cell])
-        #
-        # # Create fuel assembly Lattice
-        # assembly = openmc.RectLattice(name='Fuel Assembly')
-        # assembly.pitch = (pitch / 17, pitch / 17)
-        # assembly.lower_left = (-pitch / 2, -pitch / 2)
-        #
-        # # Create array indices for guide tube locations in lattice
-        # template_x = np.array([5, 8, 11, 3, 13, 2, 5, 8, 11, 14, 2, 5, 8,
-        #                        11, 14, 2, 5, 8, 11, 14, 3, 13, 5, 8, 11])
-        # template_y = np.array([2, 2, 2, 3, 3, 5, 5, 5, 5, 5, 8, 8, 8, 8,
-        #                        8, 11, 11, 11, 11, 11, 13, 13, 14, 14, 14])
-        #
-        # # Create 17x17 array of universes
-        # fuel_pin_universe = openmc.Universe(name='Fuel Pin')
-        # fuel_cell = openmc.Cell(name='fuel', fill=fuel, region=-fuel_or)
-        # clad_cell = openmc.Cell(name='clad', fill=clad, region=+fuel_or & -clad_or)
-        # hot_water_cell = openmc.Cell(name='hot water', fill=hot_water, region=+clad_or)
-        # fuel_pin_universe.add_cells([fuel_cell, clad_cell, hot_water_cell])
-        #
-        # assembly.universes = np.tile(fuel_pin_universe, (17, 17))
-        # assembly.universes[template_x, template_y] = guide_tube_universe
-        #
-        # # Create root Cell
-        # root_cell = openmc.Cell(name='root cell')
-        # root_cell.fill = assembly
-        # root_cell.region = +min_x & -max_x & \
-        #                    +min_y & -max_y & \
-        #                    +min_z & -max_z
-        #
-        # # Create root Universe
-        # model.geometry.root_universe = openmc.Universe(name='root universe')
-        # model.geometry.root_universe.add_cell(root_cell)
+            main_cylinders = []
+            main_cell_radii = cell_data[assembly_data[root_geometry]['main-cell']]['radii']
+            for r in range(len(main_cell_radii)):
+                main_cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=main_cell_radii[r],
+                                                       name='{} Outer Radius'.format(list(material_data.keys())[r])))
+
+            MAIN_CELLS = []
+            main_cell_materials = cell_data[assembly_data[root_geometry]['main-cell']]['materials']
+            for m in range(len(main_cell_materials)):
+                cell = openmc.Cell(name='{}'.format(main_cell_materials[m]), fill=MATERIALS_DICT[main_cell_materials[m]])
+                MAIN_CELLS.append(cell)
+
+            for c in range(len(main_cylinders)):
+                if c == 0:
+                    MAIN_CELLS[c].region = -main_cylinders[c]
+                elif c == len(main_cylinders) - 1:
+                    MAIN_CELLS[c].region = +main_cylinders[c] & +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
+                else:
+                    MAIN_CELLS[c].region = +main_cylinders[c] & -main_cylinders[c + 1]
+
+            main_universe = openmc.Universe(name='Main Pin Cell')
+            main_universe.add_cells(MAIN_CELLS)
+
+            # # Create fuel assembly Lattice
+            assembly = openmc.RectLattice(name='{}'.format(root_geometry))
+            assembly.pitch = (
+                cell_data[assembly_data[root_geometry]['main-cell']]['x-pitch'],
+                cell_data[assembly_data[root_geometry]['main-cell']]['y-pitch'])
+            assembly.lower_left = (-dim_x / 2, -dim_y / 2)
+            # noinspection PyTypeChecker
+            assembly.universes = np.tile(main_universe,
+                                         (assembly_data[root_geometry]['assembly-metrics']['assembly-num-x'],
+                                          assembly_data[root_geometry]['assembly-metrics']['assembly-num-y']))
+
+            for injected_cell in assembly_data[root_geometry]['injected-cells'].keys():
+                injection_cylinders = []
+                injection_cell_radii = cell_data[injected_cell]['radii']
+                for r in range(len(injection_cell_radii)):
+                    injection_cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=injection_cell_radii[r],
+                                                                name='{} Outer Radius'.format(
+                                                                    list(material_data.keys())[r])))
+
+                INJECTION_CELLS = []
+                injected_cell_materials = cell_data[injected_cell]['materials']
+                for m in range(len(injected_cell_materials)):
+                    cell = openmc.Cell(name='{}'.format(injected_cell_materials[m]), fill=MATERIALS_DICT[injected_cell_materials[m]])
+                    INJECTION_CELLS.append(cell)
+
+                for c in range(len(injection_cylinders)):
+                    if c == 0:
+                        INJECTION_CELLS[c].region = -injection_cylinders[c]
+                    elif c == len(injection_cylinders) - 1:
+                        INJECTION_CELLS[c].region = +injection_cylinders[
+                            c] & +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
+                    else:
+                        INJECTION_CELLS[c].region = +injection_cylinders[c] & -injection_cylinders[c + 1]
+
+                injected_universe = openmc.Universe(name='{} Cell'.format(injected_cell))
+                injected_universe.add_cells(INJECTION_CELLS)
+
+                # Create array indices for guide tube locations in lattice
+                indices_x = np.array(assembly_data[root_geometry]['injected-cells'][injected_cell]['indices'][:, 0])
+                indices_y = np.array(assembly_data[root_geometry]['injected-cells'][injected_cell]['indices'][:, 1])
+
+                assembly.universes[indices_x, indices_y] = injected_universe
+
+            # Create Assembly Root Cell
+            root_cell = openmc.Cell(name='Root Cell')
+            root_cell.fill = assembly
+            root_cell.region = +min_x & -max_x & \
+                               +min_y & -max_y & \
+                               +min_z & -max_z
+
+            # # Create root Universe
+            model.geometry.root_universe = openmc.Universe(name='Root Universe')
+            model.geometry.root_universe.add_cell(root_cell)
 
         plot = openmc.Plot().from_geometry(model.geometry)
         plot.filename = 'ModelGeometry'

@@ -354,7 +354,7 @@ def add_data(timestamp, data):
 
 ###########################################
 
-
+# TODO: Support for water holes i.e. planes = [0]
 # Graph Cell from Inputs
 @app.callback(
     Output('cell-graph', 'figure'),
@@ -471,6 +471,7 @@ def create_cell(planes, materials, colors):
     return figure
 
 
+# TODO: Support for water holes i.e. planes = [0]
 # Commit Cell to memory
 @app.callback(
     Output('cell-stores', 'data'),
@@ -571,12 +572,15 @@ def show_selection_locations(timestamp, data):
         return html.P('{}'.format(str(data['selected-cells'])))
 
 
+# TODO: Clear Selection once button pressed
 @app.callback(
     Output('injection-stores', 'data'),
-    [Input('assembly-graph', 'clickData')],
+    [Input('assembly-graph', 'clickData'),
+     # Input('submit-selected-btn', 'n_clicks')
+     ],
     [State('injection-stores', 'data')]
 )
-def print_selected_cells(clickData, data):
+def print_selected_cells(clickData, data):  # submit
     data = data or {'selected-cells': []}
     selected_cells = data['selected-cells']
 
@@ -587,6 +591,9 @@ def print_selected_cells(clickData, data):
             selected_cells.append([x, y])
         else:
             selected_cells.remove([x, y])
+
+    # if submit:
+    #     selected_cells = []
 
     return {'selected-cells': selected_cells}
 
