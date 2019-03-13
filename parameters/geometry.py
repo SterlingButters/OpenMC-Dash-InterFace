@@ -786,6 +786,7 @@ def store_to_assemblies(click, assembly_name, assembly_data, all_assembly_data):
     if click:
         all_assembly_data.update({'{}'.format(assembly_name): assembly_data})
 
+    print(all_assembly_data)
     return all_assembly_data
 
 
@@ -819,31 +820,51 @@ def populate_dropdown(cell_data, assembly_data):
 @app.callback(
     Output('boundary-range-x', 'value'),
     [Input('root-dropdown', 'value')],
-    [State('cell-stores', 'data')]
+    [State('cell-stores', 'data'),
+     State('assembly-stores', 'data')]
 )
-def set_x_boundary(root_geometry, cell_data):
-    if cell_data and root_geometry:
-        return [-cell_data[root_geometry]['x-pitch']/2, cell_data[root_geometry]['x-pitch']/2]
+def set_x_boundary(root_geometry, cell_data, assembly_data):
+    if root_geometry:
+        if root_geometry in cell_data.keys():
+            return [-cell_data[root_geometry]['x-pitch']/2, cell_data[root_geometry]['x-pitch']/2]
+        if root_geometry in assembly_data.keys():
+            upper = assembly_data[root_geometry]['assembly-metrics']['assembly-num-x'] * \
+                    assembly_data[root_geometry]['assembly-metrics']['assembly-pitch-x'] / 2
+            lower = -upper
+            return [lower, upper]
 
 
 @app.callback(
     Output('boundary-range-y', 'value'),
     [Input('root-dropdown', 'value')],
-    [State('cell-stores', 'data')]
+    [State('cell-stores', 'data'),
+     State('assembly-stores', 'data')]
 )
-def set_x_boundary(root_geometry, cell_data):
-    if cell_data and root_geometry:
-        return [-cell_data[root_geometry]['x-pitch']/2, cell_data[root_geometry]['x-pitch']/2]
+def set_x_boundary(root_geometry, cell_data, assembly_data):
+    if root_geometry:
+        if root_geometry in cell_data.keys():
+            return [-cell_data[root_geometry]['x-pitch']/2, cell_data[root_geometry]['x-pitch']/2]
+        if root_geometry in assembly_data.keys():
+            upper = assembly_data[root_geometry]['assembly-metrics']['assembly-num-y'] * \
+                    assembly_data[root_geometry]['assembly-metrics']['assembly-pitch-y'] / 2
+            lower = -upper
+            return [lower, upper]
 
 
 @app.callback(
     Output('boundary-range-z', 'value'),
     [Input('root-dropdown', 'value')],
-    [State('cell-stores', 'data')]
+    [State('cell-stores', 'data'),
+     State('assembly-stores', 'data')]
 )
-def set_x_boundary(root_geometry, cell_data):
-    if cell_data and root_geometry:
-        return [-cell_data[root_geometry]['height']/2, cell_data[root_geometry]['height']/2]
+def set_x_boundary(root_geometry, cell_data, assembly_data):
+    if root_geometry:
+        if root_geometry in cell_data.keys():
+            return [-cell_data[root_geometry]['height']/2, cell_data[root_geometry]['height']/2]
+        if root_geometry in assembly_data.keys():
+            upper = cell_data[assembly_data[root_geometry]['main-cell']]['height'] / 2
+            lower = -upper
+            return [lower, upper]
 
 ###############################################
 

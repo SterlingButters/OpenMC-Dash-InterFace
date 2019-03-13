@@ -23,89 +23,143 @@ layout = html.Div([
 
     ###############################################################
     # https://openmc.readthedocs.io/en/stable/pythonapi/generated/openmc.Settings.html#openmc.Settings
-    html.H2('Run Settings'),
 
-    html.Label('Total Batches'), dcc.Input(id='total-batches', value=100, type='number'),
-    html.Label('Inactive Batches'), dcc.Input(id='inactive-batches', value=20, type='number'),
-    html.Label('Particles'), dcc.Input(id='particles', value=1000, type='number'),
-    html.Label('Generations per Batch'), dcc.Input(id='gens-per-batch', value=10, type='number'),
-    html.Label('Seed'), dcc.Input(id='seed', value=1, type='number'),
+    html.Div([
+        html.Div([
+            html.H4('Required Settings'),
+            html.Label('Total Batches'), dcc.Input(id='total-batches', value=100, type='number'),
+            html.Label('Inactive Batches'), dcc.Input(id='inactive-batches', value=20, type='number'),
+            html.Label('Particles'), dcc.Input(id='particles', value=1000, type='number'),
+            html.Label('Generations per Batch'), dcc.Input(id='gens-per-batch', value=10, type='number'),
+            html.Label('Seed'), dcc.Input(id='seed', value=1, type='number'),
 
-    html.H4('Run Mode'),
-    dcc.Dropdown(id='run-mode', options=[
-        {'label': 'Fixed Source', 'value': 'fixed source'},
-        {'label': 'Eigenvalue', 'value': 'eigenvalue'},
-        {'label': 'Volume', 'value': 'volume'},
-        {'label': 'Plot', 'value': 'plot'},
-        {'label': 'Particle Restart', 'value': 'particle restart'},
-    ]),
+            html.H4('Miscellaneous'),
+            daq.BooleanSwitch(id='trigger-active', label='Trigger Active', labelPosition='right',
+                              style=dict(position='absolute', left=0)), html.Br(), html.Br(),
+            # keff_trigger = dict
+            # trigger_batch_interval = int
+            # trigger_max_batches = int
 
-    html.H4('Energy Mode'),
-    dcc.Dropdown(id='energy-mode', options=[
-        {'label': 'Continuous Energy', 'value': 'continuous-energy'},
-        {'label': 'Multi-Group', 'value': 'multi-group'},
-    ]),
-    html.H6('Cutoff'),
-    # Dictionary defining weight cutoff and energy cutoff.The dictionary may have three
-    # keys, ‘weight’, ‘weight_avg’ and ‘energy’.Value for ‘weight’ should be a float indicating weight
-    # cutoff below which particle undergo Russian roulette.Value for ‘weight_avg’ should be a float indicating
-    # weight assigned to particles that are not killed after Russian roulette.Value of energy should be a float
-    # indicating energy in eV below which particle will be killed.
-    dcc.Dropdown(id='cutoff', options=[
-        {'label': 'Weight', 'value': 'weight'},
-        {'label': 'Average Weight', 'value': 'weight_avg'},
-        {'label': 'Energy', 'value': 'energy'},
-    ]),
+            daq.BooleanSwitch(id='no-reduce', label='No Reduce', labelPosition='right',
+                              style=dict(position='absolute', left=0)), html.Br(), html.Br(),
+            daq.BooleanSwitch(id='confidence-intervals', label='Confidence Intervals', labelPosition='right', on=False,
+                              style=dict(position='absolute', left=0)), html.Br(), html.Br(),
+            daq.BooleanSwitch(id='ptables', label='P-Tables', labelPosition='right', on=False,
+                              style=dict(position='absolute', left=0)),
+            html.Br(), html.Br(),
+            daq.BooleanSwitch(id='run-cmfd', label='Run CMFD', labelPosition='right', on=False,
+                              style=dict(position='absolute', left=0)),
+            html.Br(), html.Br(),
+            daq.BooleanSwitch(id='survival-biasing', label='Survival Biasing', labelPosition='right', on=False,
+                              style=dict(position='absolute', left=0)), html.Br(), html.Br(),
+            daq.BooleanSwitch(id='fission-neutrons', label='Create Fission Neutrons', labelPosition='right', on=True,
+                              style=dict(position='absolute', left=0)), html.Br(), html.Br(),
+            # ufs_mesh = openmc.Mesh
+            # volume_calculations = iterable of VolumeCalculation
+            # resonance_scattering = dict
 
-    # restore_object('model').settings.entropy_mesh = openmc.mesh
-    # max_order = None or int
-    # multipole_library = 'path'
+            # tabular_legendre (dict) – Determines if a multi-group scattering moment kernel expanded via Legendre polynomials
+            # is to be converted to a tabular distribution or not. Accepted keys are ‘enable’ and ‘num_points’. The value for
+            # ‘enable’ is a bool stating whether the conversion to tabular is performed; the value for ‘num_points’ sets the
+            # number of points to use in the tabular distribution, should ‘enable’ be True.
 
-    html.H4('Temperature'),
-    # Dictionary that efines a default temperature and method for treating intermediate temperatures at which nuclear
-    # data doesn’t exist. Accepted keys are ‘default’, ‘method’, ‘range’, ‘tolerance’, and ‘multipole’. The value for
-    # ‘default’ should be a float representing the default temperature in Kelvin. The value for ‘method’ should be
-    # ‘nearest’ or ‘interpolation’. If the method is ‘nearest’, ‘tolerance’ indicates a range of temperature within
-    # which cross sections may be used. The value for ‘range’ should be a pair a minimum and maximum temperatures which
-    # are used to indicate that cross sections be loaded at all temperatures within the range. ‘multipole’ is a boolean
-    # indicating whether or not the windowed multipole method should be used to evaluate resolved resonance cross sections.
-    dcc.Dropdown(id='temperature-mode', options=[
-        {'label': 'Default', 'value': 'default'},
-        {'label': 'Method', 'value': 'method'},
-        {'label': 'Range', 'value': 'range'},
-        {'label': 'Tolerance', 'value': 'tolerance'},
-        {'label': 'Multipole', 'value': 'multipole'},
-    ]),
+            html.H4('Outputs'),
+            daq.BooleanSwitch(id='output-summary', label='Output Summary', labelPosition='right', on=True,
+                              style=dict(position='absolute', left=0)), html.Br(), html.Br(),
+            daq.BooleanSwitch(id='output-tallies', label='Output Tallies', labelPosition='right', on=True,
+                              style=dict(position='absolute', left=0)), html.Br(), html.Br(),
+            html.Label('Verbosity'),
+            dcc.Slider(id='verbosity', min=0, max=10, step=1, value=7),
 
-    html.H4('Miscellaneous'),
-    daq.BooleanSwitch(id='trigger-active', label='Trigger Active', labelPosition='right'),
-    # keff_trigger = dict
-    # trigger_batch_interval = int
-    # trigger_max_batches = int
+            html.Button('Submit Settings to Memory', id='submit-settings-btn', n_clicks=0)
+        ], style=dict(
+            display='table-cell',
+            verticalAlign="top",
+            width='25%'
+        )),
 
-    daq.BooleanSwitch(id='no-reduce', label='No Reduce', labelPosition='right'),
-    daq.BooleanSwitch(id='confidence-intervals', label='Confidence Intervals', labelPosition='right'),
-    daq.BooleanSwitch(id='ptables', label='P-Tables', labelPosition='right'),
-    daq.BooleanSwitch(id='run-cmfd', label='Run CMFD', labelPosition='right'),
-    daq.BooleanSwitch(id='survival-biasing', label='Survival Biasing', labelPosition='right'),
-    daq.BooleanSwitch(id='fission-neutrons', label='Create Fission Neutrons', labelPosition='right'),
-    # ufs_mesh = openmc.Mesh
-    # volume_calculations = iterable of VolumeCalculation
-    # resonance_scattering = dict
+        html.Div([
+            html.Div(style=dict(height=20)),
+            html.H4('Run Mode'),
+            dcc.Dropdown(id='run-mode', value='eigenvalue', options=[
+                {'label': 'Fixed Source', 'value': 'fixed source'},
+                {'label': 'Eigenvalue', 'value': 'eigenvalue'},
+                {'label': 'Volume', 'value': 'volume'},
+                {'label': 'Plot', 'value': 'plot'},
+                {'label': 'Particle Restart', 'value': 'particle restart'},
+            ]),
+            html.H4('Source Distributions'),
+            dcc.Dropdown(id='stats-spatial', value='box', options=[
+                {'label': 'Cartesian Independent', 'value': 'cartesian-independent'},
+                {'label': 'Box', 'value': 'box'},
+                {'label': 'Point', 'value': 'point'},
+            ]),
+            html.H4('Angular Distributions'),
+            dcc.Dropdown(id='stats-angular', options=[
+                {'label': 'Unit Sphere', 'value': 'unit-sphere'},
+                {'label': 'Polar Azimuthal', 'value': 'polar-azimuthal'},
+                {'label': 'Isotropic', 'value': 'isotropic'},
+                {'label': 'Mono-Directional', 'value': 'mono-directional'},
+            ]),
 
-    # tabular_legendre (dict) – Determines if a multi-group scattering moment kernel expanded via Legendre polynomials
-    # is to be converted to a tabular distribution or not. Accepted keys are ‘enable’ and ‘num_points’. The value for
-    # ‘enable’ is a bool stating whether the conversion to tabular is performed; the value for ‘num_points’ sets the
-    # number of points to use in the tabular distribution, should ‘enable’ be True.
+            html.H4('Energy Mode'),
+            dcc.Dropdown(id='energy-mode', value='continuous-energy', options=[
+                {'label': 'Continuous Energy', 'value': 'continuous-energy'},
+                {'label': 'Multi-Group', 'value': 'multi-group'},
+            ]),
+            html.H4('Probability Distributions'),
+            dcc.Dropdown(id='stats-probability', options=[
+                {'label': 'Discrete', 'value': 'discrete'},
+                {'label': 'Uniform', 'value': 'uniform'},
+                {'label': 'Maxwell', 'value': 'maxwell'},
+                {'label': 'Watt', 'value': 'watt'},
+                {'label': 'Tabular', 'value': 'tabular'},
+                {'label': 'Legendre', 'value': 'legendre'},
+                {'label': 'Mixture', 'value': 'mixture'},
+            ]),
 
-    html.H4('Outputs'),
-    daq.BooleanSwitch(id='output-cross-sections', label='Output Cross-Sections', labelPosition='right', on=True),
-    daq.BooleanSwitch(id='output-summary', label='Output Summary', labelPosition='right', on=True),
-    daq.BooleanSwitch(id='output-tallies', label='Output Tallies', labelPosition='right', on=True),
-    daq.BooleanSwitch(id='cross-sections', label='Output Cross-Sections', labelPosition='right', on=True),
-    dcc.Slider(id='verbosity', min=0, max=10, step=1, value=5),
+            html.H6('Cutoff'),
+            # Dictionary defining weight cutoff and energy cutoff.The dictionary may have three
+            # keys, ‘weight’, ‘weight_avg’ and ‘energy’.Value for ‘weight’ should be a float indicating weight
+            # cutoff below which particle undergo Russian roulette.Value for ‘weight_avg’ should be a float indicating
+            # weight assigned to particles that are not killed after Russian roulette.Value of energy should be a float
+            # indicating energy in eV below which particle will be killed.
+            dcc.Dropdown(id='cutoff', options=[
+                {'label': 'Weight', 'value': 'weight'},
+                {'label': 'Average Weight', 'value': 'weight_avg'},
+                {'label': 'Energy', 'value': 'energy'},
+            ]),
 
-    html.Button('Submit Settings to Memory', id='submit-settings-btn', n_clicks=0)
+            # restore_object('model').settings.entropy_mesh = openmc.mesh
+            # max_order = None or int
+            # multipole_library = 'path'
+
+            html.H4('Temperature'),
+            # Dictionary that efines a default temperature and method for treating intermediate temperatures at which nuclear
+            # data doesn’t exist. Accepted keys are ‘default’, ‘method’, ‘range’, ‘tolerance’, and ‘multipole’. The value for
+            # ‘default’ should be a float representing the default temperature in Kelvin. The value for ‘method’ should be
+            # ‘nearest’ or ‘interpolation’. If the method is ‘nearest’, ‘tolerance’ indicates a range of temperature within
+            # which cross sections may be used. The value for ‘range’ should be a pair a minimum and maximum temperatures which
+            # are used to indicate that cross sections be loaded at all temperatures within the range. ‘multipole’ is a boolean
+            # indicating whether or not the windowed multipole method should be used to evaluate resolved resonance cross sections.
+            dcc.Dropdown(id='temperature-mode', options=[
+                {'label': 'Default', 'value': 'default'},
+                {'label': 'Method', 'value': 'method'},
+                {'label': 'Range', 'value': 'range'},
+                {'label': 'Tolerance', 'value': 'tolerance'},
+                {'label': 'Multipole', 'value': 'multipole'},
+            ]),
+
+        ], style=dict(
+            display='table-cell',
+            verticalAlign="top",
+            width='75%'
+        ))
+    ],
+        style=dict(
+            width='100%',
+            display='table',
+        )),
 ]),
 
 
@@ -137,18 +191,16 @@ layout = html.Div([
      State('survival-biasing', 'on'),
      State('fission-neutrons', 'on'),
      # ...
-     State('output-cross-sections', 'on'),
      State('output-summary', 'on'),
      State('output-tallies', 'on'),
-     State('cross-sections', 'on'),
      State('verbosity', 'value'),
      # ...
      State('settings-stores', 'data')]
 )
 def store_settings(click,
                    total_batches, inactive_batches, particles, gens_per_batch, seed, run_mode, energy_mode, cutoff,
-                   temperature_mode, trigger_active, no_reduce, confidence_intervals, ptables, run_cmfd, survival_biasing,
-                   fission_neutrons, output_cross_sections, output_summary, output_tallies, cross_sections, verbosity,
+                   temperature_mode, trigger_active, no_reduce, confidence_intervals, ptables, run_cmfd,
+                   survival_biasing, fission_neutrons, output_summary, output_tallies, verbosity,
                    settings_data):
     settings_data = settings_data or {}
 
@@ -169,10 +221,8 @@ def store_settings(click,
                               'run-cmfd': run_cmfd,
                               'survival-biasing': survival_biasing,
                               'fission-neutrons': fission_neutrons,
-                              'output-cross-sections': output_cross_sections,
                               'output-summary': output_summary,
                               'output-tallies': output_tallies,
-                              'cross-sections': cross_sections,
                               'verbosity': verbosity}
                              )
 

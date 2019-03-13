@@ -174,25 +174,25 @@ layout = html.Div([
                     html.Div([
                         html.Div([
                             html.Label('Material Name'),
-                            dcc.Input(id='material-name', placeholder='Enter Material Name', type="text"),
+                            dcc.Input(id='material-name', placeholder='Enter Material Name', type="text"), html.Br(),
+
+                            html.Label('Material Density'),
                             daq.NumericInput(
                                 id='material-density',
                                 min=0,
                                 max=25,
                                 value=10.1,
-                                label='Material Density',
-                                labelPosition='top',
-                                size=200,
-                            ),
+                                size=193, style=dict(position='absolute', left=10)
+                            ), html.Br(), html.Br(),
+
+                            html.Label('Material Temperature'),
                             daq.NumericInput(
                                 id='material-temperature',
                                 min=0,
                                 max=4000,
                                 value=250,
-                                label='Material Temperature',
-                                labelPosition='top',
-                                size=200
-                            ), html.Br(),
+                                size=193, style=dict(position='absolute', left=10)
+                            ), html.Br(), html.Br(), html.Br(), html.Br(),
                             html.Button('Submit Material', id='submit-material-button', n_clicks_timestamp=0),
                         ],
                             style=dict(

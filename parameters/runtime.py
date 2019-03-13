@@ -32,7 +32,6 @@ layout = html.Div([
 
     #############################################################################
     html.Button('Generate XML Files', id='xml-button', n_clicks=0),
-
     # Loading/Writing XML Files
     html.Div([
         dcc.ConfirmDialog(
@@ -42,8 +41,9 @@ layout = html.Div([
         html.Div([
             html.Label('Geometry XML File Contents'),
             html.Br(),
-            dcc.Textarea(id='geometry-xml', rows=20, cols=50, placeholder='Write XML contents here and Load to File'
-                                                                          'or leave blank and Load from File'),
+            dcc.Textarea(id='geometry-xml',
+                         placeholder='Write XML contents here and Load to File or leave blank and Load from File',
+                         style=dict(width='100%', height='250px')),
             html.Br(),
             html.Button('Load Geometry XML File', n_clicks=0, id='load-geometry'),
             html.Button('Write Geometry XML File', n_clicks=0, id='write-geometry'),
@@ -51,8 +51,9 @@ layout = html.Div([
 
             html.Label('Plots XML File Contents'),
             html.Br(),
-            dcc.Textarea(id='plots-xml', rows=20, cols=50, placeholder='Write XML contents here and Load to File'
-                                                                       'or leave blank and Load from File'),
+            dcc.Textarea(id='plots-xml',
+                         placeholder='Write XML contents here and Load to File or leave blank and Load from File',
+                         style=dict(width='100%', height='250px')),
             html.Br(),
             html.Button('Load Plot XML File', n_clicks=0, id='load-plots'),
             html.Button('Write Plot XML File', n_clicks=0, id='write-plots'),
@@ -68,20 +69,13 @@ layout = html.Div([
         html.Div([
             html.Label('Materials XML File Contents'),
             html.Br(),
-            dcc.Textarea(id='materials-xml', rows=20, cols=50, placeholder='Write XML contents here and Load to File'
-                                                                           'or leave blank and Load from File'),
+            dcc.Textarea(id='materials-xml',
+                         placeholder='Write XML contents here and Load to File or leave blank and Load from File',
+                         style=dict(width='100%', height='250px')),
             html.Br(),
             html.Button('Load Material XML File', n_clicks=0, id='load-materials'),
             html.Button('Write Material XML File', n_clicks=0, id='write-materials'),
             html.P(id='material-placeholder'),  # Used as dummy for mandatory Output in decorator
-
-            html.Div(style=dict(height=250)),
-
-            html.Div(id='memory-display'),
-            html.Button('Run Simulation', id='run-button', n_clicks=0),
-            html.Br(),
-            dcc.Textarea(id='console-output', rows=40, cols=75, placeholder='Console Output will appear here...',
-                         readOnly=True),
         ],
             style=dict(
                 width='30%',
@@ -93,8 +87,9 @@ layout = html.Div([
         html.Div([
             html.Label('Tallies XML File Contents'),
             html.Br(),
-            dcc.Textarea(id='tallies-xml', rows=20, cols=50, placeholder='Write XML contents here and Load to File'
-                                                                         'or leave blank and Load from File'),
+            dcc.Textarea(id='tallies-xml',
+                         placeholder='Write XML contents here and Load to File or leave blank and Load from File',
+                         style=dict(width='100%', height='250px')),
             html.Br(),
             html.Button('Load Tallies XML File', n_clicks=0, id='load-tallies'),
             html.Button('Write Tallies XML File', n_clicks=0, id='write-tallies'),
@@ -102,8 +97,9 @@ layout = html.Div([
 
             html.Label('Settings XML File Contents'),
             html.Br(),
-            dcc.Textarea(id='settings-xml', rows=20, cols=50, placeholder='Write XML contents here and Load to File'
-                                                                          'or leave blank and Load from File'),
+            dcc.Textarea(id='settings-xml',
+                         placeholder='Write XML contents here and Load to File or leave blank and Load from File',
+                         style=dict(width='100%', height='250px')),
             html.Br(),
             html.Button('Load Settings XML File', n_clicks=0, id='load-settings'),
             html.Button('Write Material XML File', n_clicks=0, id='write-settings'),
@@ -120,7 +116,14 @@ layout = html.Div([
         display='table',
     ),
     ),
+    html.Br(),
+    html.Div(id='memory-display'),
+    html.Button('Run Simulation', id='run-button', n_clicks=0),
+    html.Br(),
+    dcc.Textarea(id='console-output', placeholder='Console Output will appear here...',
+                 readOnly=True, style=dict(width='100%', height='250px')),
 ])
+
 
 ############################################################################################################
 
@@ -284,10 +287,12 @@ def write_material_xml_contents(write_click, contents):
      State('geometry-stores', 'data'),
 
      State('mesh-score-stores', 'data'),
+     State('xsection-stores', 'data'),
 
      State('settings-stores', 'data')]
 )
-def build_model(click, material_data, cell_data, assembly_data, geometry_data, score_data, settings_data):
+def build_model(click, material_data, cell_data, assembly_data, geometry_data, score_data, xsection_data,
+                settings_data):
     if click:
         model = openmc.model.Model()
 
@@ -323,7 +328,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
                                            # enrichment=None
                                            )
                 else:
-                    mat_object.add_nuclide(nuclide=elements[i]+str(masses[i]),
+                    mat_object.add_nuclide(nuclide=elements[i] + str(masses[i]),
                                            percent=compositions[i],
                                            percent_type=types[i])
 
@@ -348,7 +353,8 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             cylinders = []
             radii = cell_data[root_geometry]['radii']
             for r in range(len(radii)):
-                cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=radii[r], name='{} Outer Radius'.format(list(material_data.keys())[r])))
+                cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=radii[r],
+                                                  name='{} Outer Radius'.format(list(material_data.keys())[r])))
 
             x_neg = openmc.XPlane(x0=-pitch_x / 2, name='x-neg', boundary_type='reflective')
             x_pos = openmc.XPlane(x0=pitch_x / 2, name='x-pos', boundary_type='reflective')
@@ -366,33 +372,38 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             # Use surface half-spaces to define regions
             for c in range(len(cylinders)):
                 if c == 0:
-                    CELLS[c].region = -cylinders[c] & +bottom & -top
-                elif c == len(cylinders)-1:
+                    CELLS[c].region = -cylinders[c]
+                elif c == len(cylinders) - 1:
                     CELLS[c].region = +cylinders[c] & +x_neg & -x_pos & +y_neg & -y_pos & +bottom & -top
                 else:
-                    CELLS[c].region = +cylinders[c] & -cylinders[c+1] & +bottom & -top
+                    CELLS[c].region = +cylinders[c] & -cylinders[c + 1]
 
             # Create root universe
             model.geometry.root_universe = openmc.Universe(0, name='Root Universe')
             model.geometry.root_universe.add_cells(CELLS)
 
-        # # Assembly
-        # if root_geometry in assembly_data.keys():
-        # # Instantiate ZCylinder surfaces
-        # fuel_or = openmc.ZCylinder(x0=0, y0=0, R=0.39218, name='Fuel OR')
-        # clad_or = openmc.ZCylinder(x0=0, y0=0, R=0.45720, name='Clad OR')
-        #
-        # # Create boundary planes to surround the geometry
-        # pitch = 21.42
-        # height = 200
-        # min_x = openmc.XPlane(x0=-pitch / 2, boundary_type='reflective')
-        # max_x = openmc.XPlane(x0=+pitch / 2, boundary_type='reflective')
-        # min_y = openmc.YPlane(y0=-pitch / 2, boundary_type='reflective')
-        # max_y = openmc.YPlane(y0=+pitch / 2, boundary_type='reflective')
-        # min_z = openmc.ZPlane(z0=-height / 2, boundary_type='reflective')
-        # max_z = openmc.ZPlane(z0=+height / 2, boundary_type='reflective')
-        #
-        # # Create a control rod guide tube universe
+        # Assembly
+        if root_geometry in assembly_data.keys():
+            # Main Cell
+            dim_x = assembly_data[root_geometry]['main-cell']['x-pitch']*assembly_data[root_geometry]['assembly-metrics']['assembly-num-x']
+            dim_y = assembly_data[root_geometry]['main-cell']['y-pitch']*assembly_data[root_geometry]['assembly-metrics']['assembly-num-y']
+            dim_z = assembly_data[root_geometry]['main-cell']['height']
+
+            cylinders = []
+            radii = assembly_data[root_geometry]['main-cell']['radii']
+            for r in range(len(radii)):
+                cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=radii[r],
+                                                  name='{} Outer Radius'.format(list(material_data.keys())[r])))
+
+            # Create boundary planes to surround the geometry
+            min_x = openmc.XPlane(x0=-dim_x / 2, boundary_type='reflective')
+            max_x = openmc.XPlane(x0=+dim_x / 2, boundary_type='reflective')
+            min_y = openmc.YPlane(y0=-dim_y / 2, boundary_type='reflective')
+            max_y = openmc.YPlane(y0=+dim_y / 2, boundary_type='reflective')
+            min_z = openmc.ZPlane(z0=-dim_z / 2, boundary_type='reflective')
+            max_z = openmc.ZPlane(z0=+dim_z / 2, boundary_type='reflective')
+
+        # Create a control rod guide tube universe
         # guide_tube_universe = openmc.Universe(name='Guide Tube')
         # gt_inner_cell = openmc.Cell(name='guide tube inner water', fill=hot_water,
         #                             region=-fuel_or)
@@ -434,24 +445,31 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         # model.geometry.root_universe = openmc.Universe(name='root universe')
         # model.geometry.root_universe.add_cell(root_cell)
 
+        plot = openmc.Plot().from_geometry(model.geometry)
+        plot.filename = 'ModelGeometry'
+        plot.pixels = (3000, 3000)
+        plot.basis = 'xy'
+        # plot.color_by = 'material'
+        model.plots.append(plot)
+        openmc.plot_geometry(output=True)
+
         #######################################
         # Mesh
-
         spatial_mesh = openmc.Mesh()
         spatial_mesh.type = 'regular'
 
         # energy_mesh = openmc.Mesh()
         for filter in score_data['filters']:
             if filter['type'] == 'spatial':
-                dim_x = filter['x-resolution']
-                dim_y = filter['y-resolution']
-                dim_z = filter['z-resolution']
+                res_x = filter['x-resolution']
+                res_y = filter['y-resolution']
+                res_z = filter['z-resolution']
                 width = filter['width']
                 depth = filter['depth']
                 height = filter['height']
-                spatial_mesh.dimension = [dim_x, dim_y, dim_z]
+                spatial_mesh.dimension = [res_x, res_y, res_z]
                 spatial_mesh.lower_left = [-width / 2, -depth / 2, -height / 2]
-                spatial_mesh.width = [width / dim_x, depth / dim_y, height / dim_z]
+                spatial_mesh.width = [width / res_x, depth / res_y, height / res_z]
 
             # if mesh_data[filter_name]['type'] == 'energy':
             # TODO
@@ -461,6 +479,34 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
 
         #######################################
         # Cross-sections
+
+        if xsection_data:
+            energy_groups = openmc.mgxs.EnergyGroups()
+            energy_start = xsection_data['energy-start']
+            energy_end = xsection_data['energy-end']
+            if xsection_data['energy-spacing'] == 'log':
+                energy_bounds = np.logspace(np.log10(energy_start), np.log10(energy_end),
+                                            xsection_data['energy-groups'] + 1)
+                energy_groups.group_edges = energy_bounds
+            elif xsection_data['energy-spacing'] == 'lin':
+                energy_bounds = np.linspace(energy_start, energy_end, xsection_data['energy-groups'] + 1)
+                energy_groups.group_edges = energy_bounds
+
+            # Initialize an 20-energy-group and 6-delayed-group MGXS Library
+            mgxs_lib = openmc.mgxs.Library(model.geometry)
+            mgxs_lib.energy_groups = energy_groups
+            mgxs_lib.num_delayed_groups = xsection_data['delayed-groups']
+            #
+            # # Specify multi-group cross section types to compute
+            mgxs_lib.mgxs_types = xsection_data['xsection-types']
+
+            # # Specify a "mesh" domain type for the cross section tally filters
+            mgxs_lib.domain_type = 'mesh'
+            # # Specify the mesh domain over which to compute multi-group cross sections
+            mgxs_lib.domains = [spatial_mesh]
+
+            # Construct all tallies needed for the multi-group cross section library
+            mgxs_lib.build_library()
 
         #######################################
         # Tallies/Scores
@@ -488,26 +534,24 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         model.settings.particles = settings_data['particles']
         model.settings.generations_per_batch = settings_data['gens-per-batch']
         model.settings.seed = settings_data['seed']
+        # Source is iterable
         model.settings.source = openmc.Source(space=openmc.stats.Box(
-            [-pitch_x/2, -pitch_y/2, -height_z/2], [pitch_x/2, pitch_y/2, height_z/2]))
+            [-width / 2, -depth / 2, -height / 2], [width / 2, depth / 2, height / 2]))
+        # model.settings.energy_mode = settings_data['energy-mode']
+        model.settings.run_mode = settings_data['run-mode']
 
-        # model.settings.run_mode = settings_data['run-mode']
-        # model.settings.energy_mode = settings_data['']
         # model.settings.cutoff = settings_data['']
         # model.settings.temperature = settings_data['']
         # model.settings.trigger_active = settings_data['']
         # model.settings.no_reduce = settings_data['']
-        # model.settings.confidence_intervals = settings_data['']
-        # model.settings.ptables = settings_data['']
-        # model.settings.run_cmfd = settings_data['']
-        # model.settings.survival_biasing = settings_data['']
-        # model.settings.fission_neutrons = settings_data['']
-        # model.settings.output.summary = settings_data['']
-        # model.settings.output.tallies = settings_data['']
-        # model.settings.output.cross_sections = settings_data['']
-        # model.settings.verbosity = settings_data['']
+        model.settings.confidence_intervals = settings_data['confidence-intervals']
+        model.settings.ptables = settings_data['ptables']
+        model.settings.run_cmfd = settings_data['run-cmfd']
+        model.settings.survival_biasing = settings_data['survival-biasing']
+        model.settings.fission_neutrons = settings_data['fission-neutrons']
+        model.settings.output = {'summary': settings_data['output-summary'], 'tallies': settings_data['output-tallies']}
+        model.settings.verbosity = settings_data['verbosity']
 
-        # model.settings.source = Iterable of openmc.Source
         # model.settings.state_point = dict
         # model.settings.source_point = dict
         # model.settings.threads = int

@@ -18,7 +18,7 @@ layout = html.Div([
                 'font-family': 'Dosis',
                 'display': 'inline',
                 'font-size': '4.0rem',
-                'color': '#4D637F'
+                'color': 'rgb(76, 1, 3)'
             }),
     html.Br(),
     dcc.Dropdown(id='score-graph-dropdown'),

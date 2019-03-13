@@ -1,6 +1,5 @@
-import json
-
 import dash_core_components as dcc
+import dash_daq as daq
 import dash_html_components as html
 from dash.dependencies import Output, State, Input
 
@@ -220,6 +219,7 @@ layout = html.Div([
         html.Button('Submit Desired Scores to Memory', id='submit-scores-btn', n_clicks=0),
 
         ########################################################################################################
+        html.H2("Cross-sections"),
         html.H3('Number of Energy Groups'),
         html.Br(),
         dcc.Slider(
@@ -229,11 +229,38 @@ layout = html.Div([
             step=1,
             value=5,
             marks={i: i for i in range(0, 100, 5)},
-        ), html.Br(),
-        dcc.RadioItems(id='scale-type', options=[
+        ), html.Br(), html.Br(),
+
+        html.Div([
+            html.Label('Energy Start [eV]'),
+            daq.NumericInput(
+                id='energy-start',
+                min=.001,
+                max=20e6,
+                value=0.001,
+                size=193,
+                # style=dict(float='left')
+            )], style=dict(position='absolute', left=10)),
+
+        dcc.RadioItems(id='energy-spacing', value='log', options=[
             {'label': 'Linear', 'value': 'lin'},
             {'label': 'Logarithmic', 'value': 'log'}
-        ]),
+        ], style=dict(position='absolute', left='45%')),
+
+        html.Div([
+            html.Label('Energy End [eV]'),
+            daq.NumericInput(
+                id='energy-end',
+                min=.001,
+                max=20e6,
+                value=20e6,
+                size=193,
+
+            )], style=dict(position='absolute', right=10)),
+
+        html.Br(), html.Br(), html.Br(),
+
+        html.H3('Number of Delayed Groups'),
         dcc.Slider(
             id='delayed-groups',
             min=0,
@@ -242,6 +269,7 @@ layout = html.Div([
             value=5,
             marks={i: i for i in range(0, 10, 1)},
         ), html.Br(),
+        html.H3('Cross Section Library Options'),
         dcc.Dropdown(id='xsection-types', multi=True, options=[
             {'label': 'Total', 'value': 'total'},
             {'label': 'Transport', 'value': 'transport'},
@@ -255,7 +283,6 @@ layout = html.Div([
             {'label': 'Beta', 'value': 'beta'},
         ]),
         html.Br(),
-        html.Label('Select mesh to apply to cross-section calculations'),
         html.Button('Submit Cross-Section Configuration to Memory', id='xsection-button'),
         html.Div(style=dict(height=50))
     ]),
@@ -265,7 +292,6 @@ layout = html.Div([
 #######################################################################################################################
 # Mesh Interface
 
-# TODO: Allow unlimited creation of meshes but limit applicable filters to 1 energy & 1 spatial
 @app.callback(
     Output('mesh-stores', 'data'),
     [Input('submit-mesh-button', 'n_clicks')],
@@ -356,12 +382,20 @@ def store_scores(click, mesh_filters, scores1, scores2, scores3, scores4, mesh_d
     Output('xsection-stores', 'data'),
     [Input('xsection-btn', 'n_clicks')],
     [State('energy-groups', 'value'),
+     State('energy-start', 'value'),
+     State('energy-end', 'value'),
+     State('energy-spacing', 'value'),
      State('delayed-groups', 'value'),
      State('xsection-types', 'value'),
      State('xsection-stores', 'data')],
 )
-def build_xs_library(click, groups, delayed, types, xsection_data):
+def build_xs_library(click, groups, start, end, spacing, delayed, types, xsection_data):
     xsection_data = xsection_data or {}
     if click:
-        print(groups, delayed, types)
+        xsection_data.update({'energy-groups': groups,
+                              'energy-start': start,
+                              'energy-end': end,
+                              'energy-spacing': spacing,
+                              'delayed-groups': delayed,
+                              'xsection-types': types})
     return xsection_data
