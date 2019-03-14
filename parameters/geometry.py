@@ -199,8 +199,18 @@ layout = html.Div([
         Below, there is a blank map of a core to fill with assemblies. The map corresponds to your 
         specified number of assemblies in each dimension. Simply
            """),
+    html.P("Number of assemblies in x dimension"),
+    dcc.Input(id='core-x-dim', placeholder='Enter Assemblies in x-dimension',
+              type='number', value=20),
+    html.P("Number of assemblies in y dimension"),
+    dcc.Input(id='core-y-dim', placeholder='Enter Assemblies in y-dimension',
+              type='number', value=20),
+    # html.Div(id='core-container'),
 
     ################################################################################
+    html.H3('Root Geometry'),
+    html.P('This is the geometry that will be modelled in the simulation. You are able to choose from'
+           'any of the past geometries that you created to include cells, assemblies, and full-core.'),
     html.P('Pick root geometry from Dropdown'),
     dcc.Dropdown(id='root-dropdown'),
 
@@ -700,6 +710,7 @@ def fill_assembly(data, assembly_data):
         # else:
 
         shapes = []
+        # TODO: Fix Assembly Hover to reflect Cell Universe
         assembly_hover = []
         for a in range(assembly_num_y):
             row = []
@@ -803,7 +814,8 @@ def fill_assembly(data, assembly_data):
         )
 
         # Add centers for selection tool
-        x_centers, y_centers = np.meshgrid(np.arange(np.shape(assembly_region)[0]), np.arange(np.shape(assembly_region)[1]))
+        x_centers, y_centers = np.meshgrid(np.arange(np.shape(assembly_region)[0]),
+                                           np.arange(np.shape(assembly_region)[1]))
 
         centers = go.Scatter(x=x_centers.flatten(),
                              y=y_centers.flatten(),
@@ -837,13 +849,53 @@ def store_to_assemblies(click, assembly_name, assembly_data, all_assembly_data):
     if click:
         all_assembly_data.update({'{}'.format(assembly_name): assembly_data})
 
-    print(all_assembly_data)
     return all_assembly_data
 
 
 #######################################################################################################################
 # Full-Core
-# TODO
+# TODO: Make core fillable
+# @app.callback(
+#     Output('core-container', 'children'),
+#     [Input('core-x-dim', 'value'),
+#      Input('core-y-dim', 'value')]
+# )
+# def create_core(core_num_x, core_num_y):
+#     assembly_region = np.ones((core_num_x, core_num_y))
+#
+#     heatmap = go.Heatmap(z=assembly_region,
+#                          hoverinfo='x+y+text',
+#                          # text=core_hover,
+#                          # colorscale=colorscale,
+#                          showscale=False,
+#                          opacity=.3)
+#
+#     data = [heatmap]
+#
+#     layout = dict(
+#         title='Core Depiction',
+#         height=1250,
+#         width=1500,
+#
+#         xaxis=dict(
+#             # range=[,],
+#             zeroline=False,
+#             fixedrange=True,
+#             ticks='',
+#             nticks=core_num_x+1
+#         ),
+#         yaxis=dict(
+#             # range=[,],
+#             zeroline=False,
+#             fixedrange=True,
+#             ticks='',
+#             nticks=core_num_y + 1
+#         ),
+#     )
+#
+#     figure = go.Figure(data=data, layout=layout)
+#
+#     return dcc.Graph(figure=figure)
 
 
 #######################################################################################################################
@@ -897,9 +949,9 @@ def set_boundaries(root_geometry, cell_data, assembly_data):
             return [x_lower, x_upper], \
                    [y_lower, y_upper], \
                    [z_lower, z_upper],
-                   # x_lower - np.sqrt(-x_lower), x_upper + np.sqrt(x_upper), \
-                   # y_lower - np.sqrt(-y_lower), y_upper + np.sqrt(y_upper), \
-                   # z_lower - np.sqrt(-z_lower), z_upper + np.sqrt(z_upper)
+            # x_lower - np.sqrt(-x_lower), x_upper + np.sqrt(x_upper), \
+            # y_lower - np.sqrt(-y_lower), y_upper + np.sqrt(y_upper), \
+            # z_lower - np.sqrt(-z_lower), z_upper + np.sqrt(z_upper)
 
         if root_geometry in assembly_data.keys():
             x_upper = assembly_data[root_geometry]['assembly-metrics']['assembly-num-x'] * \
@@ -917,9 +969,9 @@ def set_boundaries(root_geometry, cell_data, assembly_data):
             return [x_lower, x_upper], \
                    [y_lower, y_upper], \
                    [z_lower, z_upper],
-                   # x_lower - np.sqrt(-x_lower), x_upper + np.sqrt(x_upper), \
-                   # y_lower - np.sqrt(-y_lower), y_upper + np.sqrt(y_upper), \
-                   # z_lower - np.sqrt(-z_lower), z_upper + np.sqrt(z_upper)
+            # x_lower - np.sqrt(-x_lower), x_upper + np.sqrt(x_upper), \
+            # y_lower - np.sqrt(-y_lower), y_upper + np.sqrt(y_upper), \
+            # z_lower - np.sqrt(-z_lower), z_upper + np.sqrt(z_upper)
 
 
 ###############################################

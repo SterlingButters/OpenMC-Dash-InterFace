@@ -525,6 +525,7 @@ def tabulate_materials(timestamp, data):
         raise PreventUpdate
 
     df = pd.DataFrame.from_dict(data)
+    df = df.reindex(['density', 'temperature', 'elements', 'masses', 'compositions', 'types'])
     # https://plot.ly/python/figure-factory/table/
-    table = ff.create_table(df)
+    table = ff.create_table(df.reset_index())
     return table

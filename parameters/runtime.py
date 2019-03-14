@@ -120,8 +120,14 @@ layout = html.Div([
     html.Div(id='memory-display'),
     html.Button('Run Simulation', id='run-button', n_clicks=0),
     html.Br(),
-    dcc.Textarea(id='console-output', placeholder='Console Output will appear here...',
-                 readOnly=True, style=dict(width='100%', height='250px')),
+
+    dcc.Loading(id="awaiting-results",
+                children=[
+                    html.Div(id='console-output-container')
+                ],
+                type="default",  # 'graph', 'cube', 'circle', 'dot', 'default'
+                fullscreen=False,
+                ),
 ])
 
 
@@ -412,14 +418,15 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             MAIN_CELLS = []
             main_cell_materials = cell_data[assembly_data[root_geometry]['main-cell']]['materials']
             for m in range(len(main_cell_materials)):
-                cell = openmc.Cell(name='{}'.format(main_cell_materials[m]), fill=MATERIALS_DICT[main_cell_materials[m]])
+                cell = openmc.Cell(name='{}'.format(main_cell_materials[m]),
+                                   fill=MATERIALS_DICT[main_cell_materials[m]])
                 MAIN_CELLS.append(cell)
 
             for c in range(len(main_cylinders)):
                 if c == 0:
                     MAIN_CELLS[c].region = -main_cylinders[c]
                 elif c == len(main_cylinders) - 1:
-                    MAIN_CELLS[c].region = +main_cylinders[c] & +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
+                    MAIN_CELLS[c].region = +main_cylinders[c]
                 else:
                     MAIN_CELLS[c].region = +main_cylinders[c] & -main_cylinders[c + 1]
 
@@ -448,7 +455,8 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
                 INJECTION_CELLS = []
                 injected_cell_materials = cell_data[injected_cell]['materials']
                 for m in range(len(injected_cell_materials)):
-                    cell = openmc.Cell(name='{}'.format(injected_cell_materials[m]), fill=MATERIALS_DICT[injected_cell_materials[m]])
+                    cell = openmc.Cell(name='{}'.format(injected_cell_materials[m]),
+                                       fill=MATERIALS_DICT[injected_cell_materials[m]])
                     INJECTION_CELLS.append(cell)
 
                 for c in range(len(injection_cylinders)):
@@ -464,7 +472,6 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
                 injected_universe.add_cells(INJECTION_CELLS)
 
                 # Create array indices for guide tube locations in lattice
-                print(np.array(assembly_data[root_geometry]['injected-cells'][injected_cell]['indices']))
                 indices_x = np.array(assembly_data[root_geometry]['injected-cells'][injected_cell]['indices'])[:, 0]
                 indices_y = np.array(assembly_data[root_geometry]['injected-cells'][injected_cell]['indices'])[:, 1]
 
@@ -571,8 +578,17 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         model.settings.generations_per_batch = settings_data['gens-per-batch']
         model.settings.seed = settings_data['seed']
         # Source is iterable
-        model.settings.source = openmc.Source(space=openmc.stats.Box(
-            [-width / 2, -depth / 2, -height / 2], [width / 2, depth / 2, height / 2]))
+        space_sources = []
+
+        model.settings.source = openmc.Source(
+            space=openmc.stats.Box(
+            [-width / 2, -depth / 2, -height / 2], [width / 2, depth / 2, height / 2],
+            only_fissionable=True
+            ),
+            # angle=,
+            # energy=,
+            strength=1.0
+        )
         # model.settings.energy_mode = settings_data['energy-mode']
         model.settings.run_mode = settings_data['run-mode']
 
@@ -603,8 +619,9 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
 
 
 @app.callback(
-    Output('console-output', 'value'),
-    [Input('run-button', 'n_clicks')], )
+    Output('console-output-container', 'children'),
+    [Input('run-button', 'n_clicks')]
+)
 def run_model(click):
     if click:
 
@@ -640,4 +657,6 @@ def run_model(click):
         for file in xml_files_dst:
             os.remove(file)
 
-        return output.getvalue()
+        return dcc.Textarea(id='console-output', value=output.getvalue(),
+                            placeholder='Console Output will appear here...',
+                            readOnly=True, style=dict(width='100%', height='250px'))

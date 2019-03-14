@@ -38,6 +38,8 @@ app.layout = html.Div([
     # Cross-Sections
     dcc.Store(id='xsection-stores', storage_type='session'),
     # Settings
+    dcc.Store(id='mu-phi-stores', storage_type='session'),
+    dcc.Store(id='source-stores', storage_type='session'),
     dcc.Store(id='settings-stores', storage_type='session'),
 
     dcc.Tabs(id="tabs", value='postprocessing', children=[

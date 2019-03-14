@@ -30,30 +30,31 @@ https://devcenter.heroku.com/articles/s3
 ### Current release TODO List
 ##### Geometry:
 - Set Max Geometrical Boundaries based on Root Geometry in (%)
+    - Getting weird results
 ##### Mesh:
 ##### Cross-Sections:
 ##### Tallies & Settings:
 ##### Other:
-- Clean up with dash multi-output support
+- Clean up with dash multi-output support (esp `Store` components)
 
 ### Next Release Features
 - Post Processing
 - Hexagonal Lattices
-- Full Core Model -> use SELECT FEATURE (also go back and do for assemblies as well)
+- Full Core Model -> use SELECT FEATURE with underlying scatter
 - Cross-Section Library Generation
     - Energy Filter Specification 
-- Source Specification: https://openmc.readthedocs.io/en/stable/pythonapi/stats.html
+- Source Specification (https://openmc.readthedocs.io/en/stable/pythonapi/stats.html): 
+    - Layout done -> now callbacks
+    
 - Finish Settings: https://openmc.readthedocs.io/en/stable/pythonapi/generated/openmc.Settings.html?highlight=openmc.Settings
 - Dispersed Knowledge/Guidance
 
 #### Unnecessary Beautification Features
-- Add Loading State to Simulation: https://dash.plot.ly/loading-states
-- Tweak Material Table
+- Expand Lists in Material Table
 - Create Cross-Section Plots
 - 3D Rendering of Geometry
 - Graph Cell(s)/Assembly(ies) from Memory
-- Add Snackbars to Alert User that configs have been accepted into data
-- Always Styling
+- Add Snackbars to Alert User that configs have been accepted into data (easy with multi-output)
 
 #### Questionable Features
 - Removal of items from memory
