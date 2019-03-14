@@ -40,7 +40,7 @@ app.layout = html.Div([
     # Settings
     dcc.Store(id='settings-stores', storage_type='session'),
 
-    dcc.Tabs(id="tabs", value='materials', children=[
+    dcc.Tabs(id="tabs", value='postprocessing', children=[
         dcc.Tab(label='Materials', value='materials'),
         dcc.Tab(label='Geometry', value='geometry'),
         dcc.Tab(label='Mesh, Tallies, and Cross-Sections', value='mesh-tallies-xsections'),

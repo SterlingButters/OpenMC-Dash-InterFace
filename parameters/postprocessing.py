@@ -1,7 +1,8 @@
 from glob import glob
 
-import dash_html_components as html
 import dash_core_components as dcc
+import dash_html_components as html
+import dash_resumable_upload
 import numpy as np
 import openmc
 import plotly.graph_objs as go
@@ -21,16 +22,98 @@ layout = html.Div([
                 'color': 'rgb(76, 1, 3)'
             }),
     html.Br(),
+    html.P("""
+    Now for the most exciting portion: a visual representation of our model and the specifications that were created.
+    If you would like to merely upload a statepoint and summary file, you may do so with the file uploader. Otherwise,
+    the statepoint file generated from the simulation conducted previously will be used. 
+       """),
+    dash_resumable_upload.Upload(
+        id='upload',
+        maxFiles=1,
+        maxFileSize=1024 * 1024 * 10000,  # 100 MB
+        service="/upload_resumable",
+        textLabel="Drag and Drop Here to upload!",
+        startButton=False,
+        activeStyle={
+            'width': '100%',
+            'height': '60px',
+            'lineHeight': '60px',
+            'borderWidth': '1px',
+            'borderStyle': 'dashed',
+            'borderRadius': '5px',
+            'textAlign': 'center',
+            'margin': '10px'
+        },
+        defaultStyle={
+            'width': '100%',
+            'height': '60px',
+            'lineHeight': '60px',
+            'borderWidth': '1px',
+            'borderStyle': 'dashed',
+            'borderRadius': '5px',
+            'textAlign': 'center',
+            'margin': '10px'
+        },
+        completeStyle={
+            'width': '100%',
+            'height': '60px',
+            'lineHeight': '60px',
+            'borderWidth': '1px',
+            'borderStyle': 'dashed',
+            'borderRadius': '5px',
+            'textAlign': 'center',
+            'margin': '10px'
+        },
+        # Allowed arguments: activeStyle, cancelButton, chunkSize, className, completeClass, completeStyle, completedMessage, defaultStyle, disableDragAndDrop, disabledClass, fileNames, filetypes, hoveredClass, id, maxFileSize, maxFiles, pauseButton, pausedClass, service, simultaneousUploads, startButton, textLabel, uploadingClass
+    ),
+    html.Div(id='upload-status'),
+
+    html.Br(),
     dcc.Dropdown(id='score-graph-dropdown'),
+    html.Div(id='k-eff-vs-iter'),
+    html.Button('Graph k-eff', id='graph-btn', n_clicks=0), html.Br(),
+    html.Button('Search for Statepoint', id='check-file', n_clicks=0),
     html.Div(id='surface-graph')
 ])
 
 
+@app.callback(Output('upload-status', 'children'),
+              [Input('upload', 'fileNames')])
+def display_files(fileNames):
+    if fileNames is not None:
+        return html.P("Uploaded Files: {}".format(fileNames))
+    return html.P('No Files Uploaded Yet')
+
+
 @app.callback(
-    Output(component_id='surface-graph', component_property='figure'),
-    [Input(component_id='score-graph-dropdown', component_property='value')],
+    Output('k-eff-vs-iter', 'children'),
+    [Input('graph-btn', 'n_clicks')]
 )
-def statepoint_evaluation(desired_score):
+def graph_k_eff(click):
+    if click:
+        if str(*glob('statepoint*')):
+            sp = openmc.StatePoint(filename=str(*glob('statepoint*')))
+            # Get k_effs for each generation
+            k_effs = sp.k_generation
+
+            trace = go.Scatter(
+                x=np.arange(len(k_effs)),
+                y=k_effs,
+                mode='lines'
+            )
+            data = [trace]
+            layout = dict(title='K-effective vs Iteration')
+            figure = dict(data=data, layout=layout)
+            return dcc.Graph(figure=figure)
+
+
+@app.callback(
+    Output('score-graph-dropdown', 'options'),
+    [Input('check-file', 'n_clicks')]
+)
+def pop_drop(click):
+    options = []
+
     if str(*glob('statepoint*')):
         sp = openmc.StatePoint(filename=str(*glob('statepoint*')))
 
@@ -38,27 +121,35 @@ def statepoint_evaluation(desired_score):
         k_effs = sp.k_generation
 
         # Extract the current tally separately
+        tally = sp.get_tally()
+        available_scores = tally._scores
+
+        for score in available_scores:
+            options.append({'label': score, 'value': score})
+
+        return options
+
+
+@app.callback(
+    Output('surface-graph', 'children'),
+    [Input('score-graph-dropdown', 'value')]
+)
+def statepoint_evaluation(desired_score):
+    if desired_score and str(*glob('statepoint*')):
+        sp = openmc.StatePoint(filename=str(*glob('statepoint*')))
+
+        # Extract the current tally separately
+        tally = sp.get_tally()
         if desired_score == 'current':
-            tally = sp.get_tally(scores=[desired_score])
             goal = tally.get_slice(scores=[desired_score])
 
         else:
-            tally = sp.get_tally(scores=[desired_score])
             goal = tally.get_slice(scores=[desired_score])
 
         # Initialize MGXS Library with OpenMC statepoint data
         # xs_lib.load_from_statepoint(sp)
 
-        dims = (10, 17, 17)
-        goal_array = goal.get_values().reshape(dims)
-
-        ##############################################################################################
-        # data = [go.Surface(z=goal_array[0],
-        #                    # zmax=c_max,
-        #                    # zmin=0,
-        #                    colorscale='Viridis',
-        #                    )]
-        ##############################################################################################
+        goal_array = goal.get_values().reshape(sp.meshes[1]._dimension)
 
         maxes = []
         for m in range(len(goal_array)):
@@ -67,121 +158,20 @@ def statepoint_evaluation(desired_score):
         c_max = np.max(np.array(maxes))
 
         # Instantiate Data
-        data = [go.Surface(z=goal_array[0],
-                           colorscale='Viridis',
-                           )]
+        data = []
+        for i in range(0, len(goal_array), 10):
+            data.append(go.Surface(z=np.full(fill_value=i, shape=np.shape(goal_array[i])),
+                                   colorscale='Viridis',
+                                   surfacecolor=goal_array[i],
+                                   cmax=c_max
+                                   ))
 
-        ##############################################
-
-        # Instantiate Frames
-        frames = []
-        steps = []
-        for k in range(len(goal_array)):
-            frame_data = go.Surface(z=goal_array[k])
-            frame = dict(data=[frame_data], name='Axial Step {}'.format(k))
-            frames.append(frame)
-
-            slider_step = dict(args=[
-                [str(goal_array[k])],
-                dict(frame=dict(duration=0, redraw=False),
-                     mode='immediate',
-                     transition={'duration': 0})
-            ],
-                label='{} cm'.format(goal_array[k]),
-                method='animate')
-            steps.append(slider_step)
-
-        ##################################################################
-
-        # Slider Control
-        sliders_dict = dict(active=0,  # Starting Position
-                            yanchor='top',
-                            xanchor='left',
-                            currentvalue=dict(
-                                font={'size': 20},
-                                prefix='Axial Step:',
-                                visible=True,
-                                xanchor='right'
-                            ),
-                            # Transition for slider button
-                            transition=dict(duration=500,
-                                            easing='cubic-in-out'),
-                            pad={'b': 10, 't': 50},
-                            len=.9,
-                            x=0.1,
-                            y=0,
-                            steps=steps
-                            )
-
-        ##################################################################
-
-        # Layout
-        layout = dict(title='Test',
+        layout = dict(title='Visualization',
                       hovermode='closest',
                       width=1500,
-                      height=1000,
-                      scene=dict(
-                          zaxis=dict(range=[.01, c_max])),
-                      updatemenus=[dict(type='buttons',
+                      height=1000,)
 
-                                        buttons=[dict(args=[None,
-                                                            dict(frame=dict(duration=500,
-                                                                            redraw=False),
-                                                                 fromcurrent=True,
-                                                                 transition=dict(duration=100,
-                                                                                 easing='quadratic-in-out'))],
-                                                      label=u'Play',
-                                                      method=u'animate'
-                                                      ),
-
-                                                 # [] around "None" are important!
-                                                 dict(args=[[None], dict(frame=dict(duration=0,
-                                                                                    redraw=False),
-                                                                         mode='immediate',
-                                                                         transition=dict(duration=0))],
-                                                      label='Pause',
-                                                      method='animate'
-                                                      )
-                                                 ],
-
-                                        # Play Pause Button Location & Properties
-                                        direction='left',
-                                        pad={'r': 10, 't': 87},
-                                        showactive=True,
-                                        x=0.1,
-                                        xanchor='right',
-                                        y=0,
-                                        yanchor='top'
-                                        )],
-
-                      slider=dict(args=[
-                          'slider.value', {
-                              'duration': 1000,
-                              'ease': 'cubic-in-out'
-                          }
-                      ],
-                          # initialValue=burnup[0],           # ???
-                          plotlycommand='animate',
-                          # values=burnup,                    # ???
-                          visible=True
-                      ),
-                      sliders=[sliders_dict]
-                      )
-
-        ##################################################################
-
-        figure = dict(data=data, layout=layout, frames=frames)
-
-        ###################################
-        # trace = go.Scatter(
-        #     x=np.arange(len(k_effs)),
-        #     y=k_effs,
-        #     mode='line'
-        # )
-        # data = [trace]
-        # layout = dict(title='K-effective vs Iteration')
-        # figure = dict(data=data, layout=layout)
-        ###################################
+        figure = dict(data=data, layout=layout, )  # frames=frames)
 
         return dcc.Graph(figure=figure)
 

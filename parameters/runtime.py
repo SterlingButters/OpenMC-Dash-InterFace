@@ -464,8 +464,9 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
                 injected_universe.add_cells(INJECTION_CELLS)
 
                 # Create array indices for guide tube locations in lattice
-                indices_x = np.array(assembly_data[root_geometry]['injected-cells'][injected_cell]['indices'][:, 0])
-                indices_y = np.array(assembly_data[root_geometry]['injected-cells'][injected_cell]['indices'][:, 1])
+                print(np.array(assembly_data[root_geometry]['injected-cells'][injected_cell]['indices']))
+                indices_x = np.array(assembly_data[root_geometry]['injected-cells'][injected_cell]['indices'])[:, 0]
+                indices_y = np.array(assembly_data[root_geometry]['injected-cells'][injected_cell]['indices'])[:, 1]
 
                 assembly.universes[indices_x, indices_y] = injected_universe
 
@@ -635,6 +636,7 @@ def run_model(click):
         with redirect_stdout(output):
             openmc.run()
 
+        # Cleanup files after run
         for file in xml_files_dst:
             os.remove(file)
 

@@ -1,5 +1,5 @@
 import json
-
+import dash
 import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
@@ -457,7 +457,8 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
                                       },
                                     }
 
-    if mat_click > iso_click:
+    trigger = dash.callback_context.triggered[0]
+    if 'submit-material-button' in trigger['prop_id']:
         if None in [material_name, material_density]:
             print("A Material Parameter remains Unfilled")
         else:
@@ -465,11 +466,9 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
                                       {'density': material_density,
                                        'temperature': material_temperature}
                                   })
-        print(material_data)
         return material_data
 
-    if iso_click > mat_click:
-
+    if 'submit-isotope-button' in trigger['prop_id']:
         chosen_element = clickData['points'][0]['text'].split(':')[0] if clickData else None
         element_mass = float(clickData['points'][0]['text'].split(':')[2]) if clickData else None
 
@@ -512,11 +511,10 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
              'compositions': compositions,
              'types': types}
         )
-        print(material_data)
         return material_data
 
 
-# Populate Table from Memory - Must be able to recall material data from memory
+# Populate Table from Memory
 @app.callback(
     Output('material-display', 'figure'),
     [Input('material-stores', 'modified_timestamp')],

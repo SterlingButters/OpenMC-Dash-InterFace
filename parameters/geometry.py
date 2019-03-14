@@ -1,3 +1,4 @@
+import dash
 import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
@@ -192,6 +193,14 @@ layout = html.Div([
     html.Div(style=dict(height=30)),
 
     ################################################################################
+    html.H3('Core'),
+    html.P("""
+        Now that you have created several assemblies, it is time to insert those into our core. 
+        Below, there is a blank map of a core to fill with assemblies. The map corresponds to your 
+        specified number of assemblies in each dimension. Simply
+           """),
+
+    ################################################################################
     html.P('Pick root geometry from Dropdown'),
     dcc.Dropdown(id='root-dropdown'),
 
@@ -213,8 +222,12 @@ layout = html.Div([
                             value=[-10, 10],
                             marks={
                                 -100: {'label': '-100', 'style': {'color': '#77b0b1'}},
+                                -50: {'label': '-50', 'style': {'color': '#77b0b1'}},
+                                -10: {'label': '-10', 'style': {'color': '#77b0b1'}},
                                 0: {'label': '0', 'style': {'color': '#f50'}},
-                                100: {'label': '100', 'style': {'color': '#f50'}}
+                                10: {'label': '10', 'style': {'color': '#77b0b1'}},
+                                50: {'label': '50', 'style': {'color': '#77b0b1'}},
+                                100: {'label': '100', 'style': {'color': '#77b0b1'}}
                             },
                             allowCross=False,
                             pushable=True),
@@ -247,8 +260,12 @@ layout = html.Div([
                             value=[-10, 10],
                             marks={
                                 -100: {'label': '-100', 'style': {'color': '#77b0b1'}},
+                                -50: {'label': '-50', 'style': {'color': '#77b0b1'}},
+                                -10: {'label': '-10', 'style': {'color': '#77b0b1'}},
                                 0: {'label': '0', 'style': {'color': '#f50'}},
-                                100: {'label': '100', 'style': {'color': '#f50'}}
+                                10: {'label': '10', 'style': {'color': '#77b0b1'}},
+                                50: {'label': '50', 'style': {'color': '#77b0b1'}},
+                                100: {'label': '100', 'style': {'color': '#77b0b1'}}
                             },
                             allowCross=False,
                             pushable=True,
@@ -282,8 +299,12 @@ layout = html.Div([
                             value=[-10, 10],
                             marks={
                                 -100: {'label': '-100', 'style': {'color': '#77b0b1'}},
+                                -50: {'label': '-50', 'style': {'color': '#77b0b1'}},
+                                -10: {'label': '-10', 'style': {'color': '#77b0b1'}},
                                 0: {'label': '0', 'style': {'color': '#f50'}},
-                                100: {'label': '100', 'style': {'color': '#f50'}}
+                                10: {'label': '10', 'style': {'color': '#77b0b1'}},
+                                50: {'label': '50', 'style': {'color': '#77b0b1'}},
+                                100: {'label': '100', 'style': {'color': '#77b0b1'}}
                             },
                             allowCross=False,
                             pushable=True,
@@ -572,19 +593,32 @@ def show_selection_locations(timestamp, data):
         return html.P('{}'.format(str(data['selected-cells'])))
 
 
-# TODO: Clear Selection once button pressed
 @app.callback(
     Output('injection-stores', 'data'),
     [Input('assembly-graph', 'clickData'),
-     # Input('submit-selected-btn', 'n_clicks')
-     ],
-    [State('injection-stores', 'data')]
+     Input('assembly-graph', 'selectedData'),
+     Input('submit-selected-btn', 'n_clicks')],
+    [State('cell-dropdown', 'value'),
+     State('injection-stores', 'data')]
 )
-def print_selected_cells(clickData, data):  # submit
+def print_selected_cells(clickData, selectedData, clicks, injection_cell, data):
+    if not dash.callback_context.triggered:
+        raise PreventUpdate
     data = data or {'selected-cells': []}
     selected_cells = data['selected-cells']
 
-    if clickData:
+    trigger = dash.callback_context.triggered[0]
+
+    if selectedData and injection_cell:
+        xs = [point['x'] for point in selectedData['points']]
+        ys = [point['y'] for point in selectedData['points']]
+        for i in range(len(xs)):
+            if [xs[i], ys[i]] not in selected_cells:
+                selected_cells.append([xs[i], ys[i]])
+            else:
+                selected_cells.remove([xs[i], ys[i]])
+
+    if clickData and injection_cell:
         x = clickData['points'][0]['x']
         y = clickData['points'][0]['y']
         if [x, y] not in selected_cells:
@@ -592,8 +626,8 @@ def print_selected_cells(clickData, data):  # submit
         else:
             selected_cells.remove([x, y])
 
-    # if submit:
-    #     selected_cells = []
+    if 'btn' in trigger['prop_id']:
+        selected_cells = []
 
     return {'selected-cells': selected_cells}
 
@@ -642,6 +676,7 @@ def configure_stores(clicks, main_cell, assembly_num_x, assembly_num_y, selected
     return data
 
 
+# TODO: Consider using markers over shapes to give visual feedback on selected data
 @app.callback(
     Output('assembly-container', 'children'),
     [Input('cell-stores', 'data'),
@@ -767,13 +802,22 @@ def fill_assembly(data, assembly_data):
             shapes=shapes,
         )
 
+        # Add centers for selection tool
+        x_centers, y_centers = np.meshgrid(np.arange(np.shape(assembly_region)[0]), np.arange(np.shape(assembly_region)[1]))
+
+        centers = go.Scatter(x=x_centers.flatten(),
+                             y=y_centers.flatten(),
+                             mode='markers',
+                             opacity=0)
+
         heatmap = go.Heatmap(z=assembly_region,
                              hoverinfo='x+y+text',
                              text=assembly_hover,
                              colorscale=colorscale,
                              showscale=False,
                              opacity=1)
-        data = [heatmap]
+
+        data = [heatmap, centers]
 
         figure = dict(data=data, layout=layout)
 
@@ -824,54 +868,59 @@ def populate_dropdown(cell_data, assembly_data):
 
 #######################################################################################################################
 # Boundaries
+
+
 @app.callback(
-    Output('boundary-range-x', 'value'),
+    [Output('boundary-range-x', 'value'),
+     Output('boundary-range-y', 'value'),
+     Output('boundary-range-z', 'value'),
+     # Output('boundary-range-x', 'min'),
+     # Output('boundary-range-x', 'max'),
+     # Output('boundary-range-y', 'min'),
+     # Output('boundary-range-y', 'max'),
+     # Output('boundary-range-z', 'min'),
+     # Output('boundary-range-z', 'max')
+     ],
     [Input('root-dropdown', 'value')],
     [State('cell-stores', 'data'),
      State('assembly-stores', 'data')]
 )
-def set_x_boundary(root_geometry, cell_data, assembly_data):
+def set_boundaries(root_geometry, cell_data, assembly_data):
     if root_geometry:
         if root_geometry in cell_data.keys():
-            return [-cell_data[root_geometry]['x-pitch']/2, cell_data[root_geometry]['x-pitch']/2]
+            x_upper = cell_data[root_geometry]['x-pitch'] / 2
+            x_lower = -x_upper
+            y_upper = cell_data[root_geometry]['y-pitch'] / 2
+            y_lower = -y_upper
+            z_upper = cell_data[root_geometry]['height'] / 2
+            z_lower = -z_upper
+            return [x_lower, x_upper], \
+                   [y_lower, y_upper], \
+                   [z_lower, z_upper],
+                   # x_lower - np.sqrt(-x_lower), x_upper + np.sqrt(x_upper), \
+                   # y_lower - np.sqrt(-y_lower), y_upper + np.sqrt(y_upper), \
+                   # z_lower - np.sqrt(-z_lower), z_upper + np.sqrt(z_upper)
+
         if root_geometry in assembly_data.keys():
-            upper = assembly_data[root_geometry]['assembly-metrics']['assembly-num-x'] * \
-                    assembly_data[root_geometry]['assembly-metrics']['assembly-pitch-x'] / 2
-            lower = -upper
-            return [lower, upper]
+            x_upper = assembly_data[root_geometry]['assembly-metrics']['assembly-num-x'] * \
+                      assembly_data[root_geometry]['assembly-metrics']['assembly-pitch-x'] / 2
+            x_lower = -x_upper
 
+            y_upper = assembly_data[root_geometry]['assembly-metrics']['assembly-num-y'] * \
+                      assembly_data[root_geometry]['assembly-metrics']['assembly-pitch-y'] / 2
+            y_lower = -y_upper
 
-@app.callback(
-    Output('boundary-range-y', 'value'),
-    [Input('root-dropdown', 'value')],
-    [State('cell-stores', 'data'),
-     State('assembly-stores', 'data')]
-)
-def set_x_boundary(root_geometry, cell_data, assembly_data):
-    if root_geometry:
-        if root_geometry in cell_data.keys():
-            return [-cell_data[root_geometry]['x-pitch']/2, cell_data[root_geometry]['x-pitch']/2]
-        if root_geometry in assembly_data.keys():
-            upper = assembly_data[root_geometry]['assembly-metrics']['assembly-num-y'] * \
-                    assembly_data[root_geometry]['assembly-metrics']['assembly-pitch-y'] / 2
-            lower = -upper
-            return [lower, upper]
+            z_upper = cell_data[assembly_data[root_geometry]['main-cell']]['height'] / 2
+            z_lower = -z_upper
 
+            # Create min/max values with arbitrary relationship to values -> trying sqrt
+            return [x_lower, x_upper], \
+                   [y_lower, y_upper], \
+                   [z_lower, z_upper],
+                   # x_lower - np.sqrt(-x_lower), x_upper + np.sqrt(x_upper), \
+                   # y_lower - np.sqrt(-y_lower), y_upper + np.sqrt(y_upper), \
+                   # z_lower - np.sqrt(-z_lower), z_upper + np.sqrt(z_upper)
 
-@app.callback(
-    Output('boundary-range-z', 'value'),
-    [Input('root-dropdown', 'value')],
-    [State('cell-stores', 'data'),
-     State('assembly-stores', 'data')]
-)
-def set_x_boundary(root_geometry, cell_data, assembly_data):
-    if root_geometry:
-        if root_geometry in cell_data.keys():
-            return [-cell_data[root_geometry]['height']/2, cell_data[root_geometry]['height']/2]
-        if root_geometry in assembly_data.keys():
-            upper = cell_data[assembly_data[root_geometry]['main-cell']]['height'] / 2
-            lower = -upper
-            return [lower, upper]
 
 ###############################################
 
