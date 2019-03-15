@@ -40,7 +40,7 @@ layout = html.Div([
             # trigger_batch_interval = int
             # trigger_max_batches = int
 
-            daq.BooleanSwitch(id='no-reduce', label='No Reduce', labelPosition='right',
+            daq.BooleanSwitch(id='no-reduce', label='No Reduce', labelPosition='right', on=False,
                               style=dict(position='absolute', left=0)), html.Br(), html.Br(),
             daq.BooleanSwitch(id='confidence-intervals', label='Confidence Intervals', labelPosition='right', on=False,
                               style=dict(position='absolute', left=0)), html.Br(), html.Br(),
@@ -96,16 +96,80 @@ layout = html.Div([
             ]),
 
             html.H6('Cutoff'),
-            # Dictionary defining weight cutoff and energy cutoff.The dictionary may have three
-            # keys, ‘weight’, ‘weight_avg’ and ‘energy’.Value for ‘weight’ should be a float indicating weight
-            # cutoff below which particle undergo Russian roulette.Value for ‘weight_avg’ should be a float indicating
-            # weight assigned to particles that are not killed after Russian roulette.Value of energy should be a float
-            # indicating energy in eV below which particle will be killed.
-            dcc.Dropdown(id='cutoff', options=[
+            dcc.Dropdown(id='cutoff', multi=True, value=None, options=[
+                {'label': 'No Cutoff Specification', 'value': None},
                 {'label': 'Weight', 'value': 'weight'},
                 {'label': 'Average Weight', 'value': 'weight_avg'},
                 {'label': 'Energy', 'value': 'energy'},
             ]),
+
+            html.Div([
+                html.H6('Weight'),
+                html.P('Value for ‘weight’ should be a float indicating weight cutoff below which particle undergo Russian roulette.'),
+                daq.NumericInput(id='cutoff-weight',
+                                 value=0,
+                                 size=150,
+                                 ),
+            ], id='cutoff-weight-container'),
+
+            html.Div([
+                html.H6('Average Weight'),
+                html.P('Value for ‘weight_avg’ should be a float indicating weight assigned to particles that are not killed after Russian roulette.'),
+                daq.NumericInput(id='cutoff-weight-avg',
+                                 value=0,
+                                 size=150,
+                                 ),
+            ], id='cutoff-avg-container'),
+
+            html.Div([
+                html.H6('Energy'),
+                html.P('Value of energy should be a float indicating energy in eV below which particle will be killed.'),
+                daq.NumericInput(id='cutoff-energy',
+                                 value=0,
+                                 size=150,
+                                 ),
+            ], id='cutoff-energy-container'),
+
+            html.H4('Temperature Mode'),
+            dcc.Dropdown(id='temperature-mode', value=None, multi=True, options=[
+                {'label': 'No Temperature Specification', 'value': None},
+                {'label': 'Default', 'value': 'default'},
+                {'label': 'Method', 'value': 'method'},
+                {'label': 'Range', 'value': 'range'},
+                {'label': 'Multipole', 'value': 'multipole'},
+            ]),
+
+            html.Div([
+                html.H6('The value for ‘default’ should be a float representing the default temperature in Kelvin.'),
+                html.Label('Temperature Default'),
+                daq.NumericInput(id='temperature-default', size=150, min=0)
+            ], id='temp-default-container'),
+
+            html.Div([
+                html.H6('The value for ‘method’ should be ‘nearest’ or ‘interpolation’. If the method is ‘nearest’, \
+                        ‘tolerance’ indicates a range of temperature within which cross sections may be used.'),
+                html.Label('Temperature Method'),
+                dcc.RadioItems(id='temperature-method', options=[
+                    {'label': 'Nearest', 'value': 'nearest'},
+                    {'label': 'Interpolation', 'value': 'interpolation'}
+                ]),
+                html.Label('Tolerance'),
+                daq.NumericInput(id='temperature-tolerance', value=0, size=150, min=0)
+            ], id='temp-method-container'),
+
+            html.Div([
+                html.H6('The value for ‘range’ should be a pair a minimum and maximum temperatures which \
+                         are used to indicate that cross sections be loaded at all temperatures within the range.'),
+                html.Label('Temperature Range'),
+                dcc.Input(id='temperature-range', placeholder='tmin, tmax')
+            ], id='temp-range-container'),
+
+            html.Div([
+                html.H6('The value for ‘multipole’ is a boolean indicating whether or not the windowed multipole method \
+                should be used to evaluate resolved resonance cross sections.'),
+                html.Label('Temperature Multipole'),
+                daq.BooleanSwitch(id='temperature-multipole', style=dict(float='left'))
+            ], id='temp-multipole-container'),
 
             html.H3('Source Distributions'),
             html.P("""
@@ -113,18 +177,49 @@ layout = html.Div([
                 Cartesian Independent, Box, and Point. Box is selected by default and it allows the creation
                 of particles anywhere in the geometry that there exists fissionable material. OpenMC allows
                 for particle initialization in non-fissionable materials but for this scope that is non-sensible 
-                thus particles will only be initialized in fissionable materials. *Describe Cartesian Independent 
-                and Point once implemented*
+                thus particles will only be initialized in fissionable materials. *Describe Cartesian Independent once
+                implemented*
                    """),
+
+            html.H4('Spatial Distributions'),
             dcc.Dropdown(id='stats-spatial', value='box', options=[
                 {'label': 'Cartesian Independent', 'value': 'cartesian-independent'},
                 {'label': 'Box', 'value': 'box'},
                 {'label': 'Point', 'value': 'point'},
             ]),
-            html.Label('Whole Geometry'),
-            daq.BooleanSwitch(id='whole-geometry', on=True, style=dict(float='left')),
-            html.P('If whole geometry is on, this means that a box distribution will occupy the whole geometry'),
-            html.Br(),
+
+            html.Div([
+                html.Label('Source Location X'),
+                daq.NumericInput(id='point-x',
+                                 value=0,
+                                 size=150,
+                                 ),
+                html.Label('Source Location Y'),
+                daq.NumericInput(id='point-y',
+                                 value=0,
+                                 size=150,
+                                 ),
+                html.Label('Source Location Z'),
+                daq.NumericInput(id='point-z',
+                                 value=0,
+                                 size=150,
+                                 ),
+            ], id='point-source-params'),
+
+            html.Div([
+                dcc.Checklist(id='cartesian-coords', values=[], options=[
+                    {'label': 'x', 'value': 'x'},
+                    {'label': 'y', 'value': 'y'},
+                    {'label': 'z', 'value': 'z'}
+                ])
+                # TODO: Finish Cartesian Independent
+            ], id='cartesian-independent-params'),
+
+            html.Div([
+                html.Label('Whole Geometry'),
+                daq.BooleanSwitch(id='whole-geometry', on=True, style=dict(float='left')),
+                html.P('If whole geometry is on, this means that a box distribution will occupy the whole geometry'),
+            ], id='whole-geometry-container'),
 
             html.Div([
                 html.Label('Lower x'),
@@ -163,17 +258,10 @@ layout = html.Div([
             dcc.Dropdown(id='stats-angular', value='isotropic', options=[
                 {'label': 'No Angular Specification', 'value': None},
                 {'label': 'Polar Azimuthal', 'value': 'polar-azimuthal'},
-                # Parameters: mu (openmc.stats.Univariate) – Distribution of the cosine of the polar angle
-                #             phi (openmc.stats.Univariate) – Distribution of the azimuthal angle in radians
-                #             reference_uvw (Iterable of float)
-
                 {'label': 'Isotropic', 'value': 'isotropic'},
-                # Parameters: None
-
                 {'label': 'Mono-Directional', 'value': 'mono-directional'},
-                # Parameters: reference_uvw (Iterable of float) – Direction from which polar angle is measured.
-                #                                                 Defaults to the positive x-direction.
             ]),
+
             html.Div([
                 html.Label('Reference U'),
                 daq.NumericInput(id='reference-u',
@@ -193,7 +281,7 @@ layout = html.Div([
             ], id='reference-uvw'),
             html.Br(),
 
-            dcc.RadioItems(id='mu-or-phi', value=None, options=[
+            dcc.Checklist(id='mu-or-phi', values=[], options=[
                 {'label': 'Mu', 'value': 'mu'},
                 {'label': 'Phi', 'value': 'phi'}
             ]),
@@ -295,22 +383,6 @@ layout = html.Div([
             # max_order = None or int
             # multipole_library = 'path'
 
-            html.H4('Temperature'),
-            # Dictionary that efines a default temperature and method for treating intermediate temperatures at which nuclear
-            # data doesn’t exist. Accepted keys are ‘default’, ‘method’, ‘range’, ‘tolerance’, and ‘multipole’. The value for
-            # ‘default’ should be a float representing the default temperature in Kelvin. The value for ‘method’ should be
-            # ‘nearest’ or ‘interpolation’. If the method is ‘nearest’, ‘tolerance’ indicates a range of temperature within
-            # which cross sections may be used. The value for ‘range’ should be a pair a minimum and maximum temperatures which
-            # are used to indicate that cross sections be loaded at all temperatures within the range. ‘multipole’ is a boolean
-            # indicating whether or not the windowed multipole method should be used to evaluate resolved resonance cross sections.
-            dcc.Dropdown(id='temperature-mode', options=[
-                {'label': 'Default', 'value': 'default'},
-                {'label': 'Method', 'value': 'method'},
-                {'label': 'Range', 'value': 'range'},
-                {'label': 'Tolerance', 'value': 'tolerance'},
-                {'label': 'Multipole', 'value': 'multipole'},
-            ]),
-
         ], style=dict(
             display='table-cell',
             verticalAlign="top",
@@ -327,6 +399,88 @@ layout = html.Div([
 #######################################################################################################################
 # Settings Interface
 
+################################################
+# Cutoff Hide/Show
+@app.callback(
+    [Output('cutoff-weight-container', 'style'),
+     Output('cutoff-avg-container', 'style'),
+     Output('cutoff-energy-container', 'style')],
+    [Input('cutoff', 'value')]
+)
+def hide_elements(cutoff_selections):
+    if cutoff_selections:
+        if 'weight' in cutoff_selections:
+            display_1 = dict()
+        else:
+            display_1 = dict(display='none')
+
+        if 'weight_avg' in cutoff_selections:
+            display_2 = dict()
+        else:
+            display_2 = dict(display='none')
+
+        if 'energy' in cutoff_selections:
+            display_3 = dict()
+        else:
+            display_3 = dict(display='none')
+
+        return display_1, display_2, display_3
+
+    return dict(display='none'), dict(display='none'), dict(display='none')
+
+
+################################################
+# Temperature Hide/Show
+@app.callback(
+    [Output('temp-default-container', 'style'),
+     Output('temp-method-container', 'style'),
+     Output('temp-range-container', 'style'),
+     Output('temp-multipole-container', 'style')],
+    [Input('temperature-mode', 'value')]
+)
+def hide_elements(temp_mode_selections):
+    if temp_mode_selections:
+        if 'default' in temp_mode_selections:
+            display_1 = dict()
+        else:
+            display_1 = dict(display='none')
+
+        if 'method' in temp_mode_selections:
+            display_2 = dict()
+        else:
+            display_2 = dict(display='none')
+
+        if 'range' in temp_mode_selections:
+            display_3 = dict()
+        else:
+            display_3 = dict(display='none')
+
+        if 'multipole' in temp_mode_selections:
+            display_4 = dict()
+        else:
+            display_4 = dict(display='none')
+
+        return display_1, display_2, display_3, display_4
+
+    return dict(display='none'), dict(display='none'), dict(display='none'), dict(display='none')
+
+################################################
+# Spatial Hide/Show
+@app.callback(
+    [Output('point-source-params', 'style'),
+     Output('whole-geometry-container', 'style'),
+     Output('cartesian-independent-params', 'style')],
+    [Input('stats-spatial', 'value')]
+)
+def hide_elements(source_spatial):
+    if source_spatial == 'point':
+        return dict(), dict(display='none'), dict(display='none')
+    elif source_spatial == 'box':
+        return dict(display='none'), dict(), dict(display='none')
+    else:
+        return dict(display='none'), dict(display='none'), dict()
+
+
 @app.callback(
     Output('source-bounds', 'style'),
     [Input('whole-geometry', 'on')]
@@ -338,6 +492,8 @@ def hide_bounds(on):
         return None
 
 
+################################################
+# Angular Hide/Show
 @app.callback(
     [Output('mu-or-phi', 'style'),
      Output('reference-uvw', 'style')],
@@ -403,10 +559,12 @@ def hide_elements(probability_type):
             display='none'), dict(),
 
 
+################################################
+# Actual Callbacks to store data
 @app.callback(
     Output('mu-phi-stores', 'data'),
     [Input('submit-prob-mu-phi', 'n_clicks')],
-    [State('mu-or-phi', 'value'),
+    [State('mu-or-phi', 'values'),
 
      State('stats-probability', 'value'),
 
@@ -438,7 +596,7 @@ def store_mu_phi_prob(click, mu_or_phi, stats_probability,
                       angle_legendre_coeffs, mu_phi_data):
     mu_phi_data = mu_phi_data or {}
 
-    if click and mu_or_phi == 'mu':
+    if click and 'mu' in mu_or_phi:
         mu_phi_data.update({'mu':
                                 {'stats-probability': stats_probability,
                                  'angle-discrete-values': angle_discrete_values,
@@ -453,7 +611,7 @@ def store_mu_phi_prob(click, mu_or_phi, stats_probability,
                                  'angle-interpolation': angle_tabular_interpolation,
                                  'angle-legendre-coeffs': angle_legendre_coeffs}
                             })
-    if click and mu_or_phi == 'phi':
+    if click and 'phi' in mu_or_phi:
         mu_phi_data.update({'phi':
                                 {'stats-probability': stats_probability,
                                  'angle-discrete-values': angle_discrete_values,
@@ -478,6 +636,10 @@ def store_mu_phi_prob(click, mu_or_phi, stats_probability,
 
      State('stats-spatial', 'value'),
 
+     State('point-x', 'value'),
+     State('point-y', 'value'),
+     State('point-z', 'value'),
+
      State('whole-geometry', 'value'),
      State('box-lower-x', 'value'),
      State('box-lower-y', 'value'),
@@ -494,15 +656,20 @@ def store_mu_phi_prob(click, mu_or_phi, stats_probability,
      State('mu-phi-stores', 'data'),
      State('source-stores', 'data')]
 )
-def test(click, source_name, stats_spatial, whole_geometry,
-         box_lower_x, box_lower_y, box_lower_z,
-         box_upper_x, box_upper_y, box_upper_z,
-         stats_angular, reference_u, reference_v, reference_w,
-         mu_phi_data, source_data):
+def store_settings(click, source_name, stats_spatial,
+                   point_x, point_y, point_z,
+                   whole_geometry,
+                   box_lower_x, box_lower_y, box_lower_z,
+                   box_upper_x, box_upper_y, box_upper_z,
+                   stats_angular, reference_u, reference_v, reference_w,
+                   mu_phi_data, source_data):
     source_data = source_data or {}
     if click:
         source_data.update({'{}'.format(source_name):
                                 {'stats-spatial': stats_spatial,
+                                 'point-x': point_x,
+                                 'point-y': point_y,
+                                 'point-z': point_z,
                                  'whole-geometry': whole_geometry,
                                  'box-lower-x': box_lower_x,
                                  'box-lower-y': box_lower_y,
@@ -526,6 +693,20 @@ def test(click, source_name, stats_spatial, whole_geometry,
     return source_data
 
 
+@app.callback(
+    Output('source-dropdown', 'options'),
+    [Input('source-stores', 'data')]
+)
+def populate_dropdown(source_data):
+    options = []
+    for source in list(source_data.keys()):
+        options.append({'label': source, 'value': source})
+
+    return options
+
+
+# TODO: Add source data into setting-stores
+# TODO: Add cutoff data into setting-stores
 @app.callback(
     Output('settings-stores', 'data'),
     [Input('submit-settings-btn', 'n_clicks')],

@@ -350,6 +350,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
 
         #######################################
         # Geometry
+        # TODO: See https://github.com/openmc-dev/openmc/issues/1194
 
         # Determine whether root geometry is a cell or an assembly
         root_geometry = geometry_data['root-geometry']
@@ -515,7 +516,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
                 spatial_mesh.width = [width / res_x, depth / res_y, height / res_z]
 
             # if mesh_data[filter_name]['type'] == 'energy':
-            # TODO
+            # TODO: Parse energy bins from mesh_data
 
         # Create a mesh filter
         mesh_filter = openmc.MeshFilter(spatial_mesh)
@@ -557,7 +558,6 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         model.tallies = openmc.Tallies()
         # mgxs_lib.add_to_tallies_file(model.tallies, merge=True)
 
-        # Instantiate a flux tally; Other valid options: 'current', 'fission', etc
         mesh_tally = openmc.Tally(name='Mesh')
         mesh_tally.filters = [mesh_filter]
         mesh_tally.scores = score_data['scores']
@@ -571,31 +571,33 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         # model.tallies.append(energy_tally)
 
         #######################################
-        # Settings TODO: Check
+        # Settings
         model.settings.batches = settings_data['total-batches']
         model.settings.inactive = settings_data['inactive-batches']
         model.settings.particles = settings_data['particles']
         model.settings.generations_per_batch = settings_data['gens-per-batch']
         model.settings.seed = settings_data['seed']
-        # Source is iterable
+
+        # TODO: Parse sources from settings_data
         space_sources = []
 
         model.settings.source = openmc.Source(
             space=openmc.stats.Box(
-            [-width / 2, -depth / 2, -height / 2], [width / 2, depth / 2, height / 2],
-            only_fissionable=True
+                [-width / 2, -depth / 2, -height / 2], [width / 2, depth / 2, height / 2],
+                only_fissionable=True
             ),
             # angle=,
             # energy=,
             strength=1.0
         )
-        # model.settings.energy_mode = settings_data['energy-mode']
+
+        model.settings.energy_mode = settings_data['energy-mode']
         model.settings.run_mode = settings_data['run-mode']
 
         # model.settings.cutoff = settings_data['']
         # model.settings.temperature = settings_data['']
         # model.settings.trigger_active = settings_data['']
-        # model.settings.no_reduce = settings_data['']
+        model.settings.no_reduce = settings_data['no-reduce']
         model.settings.confidence_intervals = settings_data['confidence-intervals']
         model.settings.ptables = settings_data['ptables']
         model.settings.run_cmfd = settings_data['run-cmfd']

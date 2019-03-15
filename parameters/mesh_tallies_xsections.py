@@ -1,3 +1,4 @@
+import dash
 import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
@@ -31,18 +32,81 @@ layout = html.Div([
     ########################################################################################################
     # Mesh
     html.Div([
-        dcc.Dropdown(id='mesh-type',
-                     options=[{'label': 'Energy Filter', 'value': 'energy'},
-                              {'label': 'Spatial Filter', 'value': 'spatial'}],
-                     value='spatial'),
-        html.Label('Energy Filter'),
-        dcc.Slider(id='mesh-energy-slider',
-                   min=0,
-                   max=100,
-                   step=1,
-                   value=25,
-                   marks={i: i for i in range(0, 100, 10)},
-                   ),
+
+        html.H2("Cross-sections"),
+        html.H3('Number of Energy Groups'),
+        html.Br(),
+        dcc.Slider(
+            id='energy-groups',
+            min=0,
+            max=100,
+            step=1,
+            value=5,
+            marks={i: i for i in range(0, 100, 5)},
+        ), html.Br(), html.Br(),
+
+        html.Div([
+            html.Label('Energy Start [eV]'),
+            daq.NumericInput(
+                id='energy-start',
+                min=.001,
+                max=20e6,
+                value=0.001,
+                size=193,
+                # style=dict(float='left')
+            )], style=dict(position='absolute', left=10)),
+
+        dcc.RadioItems(id='energy-spacing', value='log', options=[
+            {'label': 'Linear', 'value': 'lin'},
+            {'label': 'Logarithmic', 'value': 'log'}
+        ], style=dict(position='absolute', left='45%')),
+
+        html.Div([
+            html.Label('Energy End [eV]'),
+            daq.NumericInput(
+                id='energy-end',
+                min=.001,
+                max=20e6,
+                value=20e6,
+                size=193,
+
+            )], style=dict(position='absolute', right=10)),
+
+        html.Br(), html.Br(), html.Br(),
+
+        dcc.Input(id='energy-filter-name', placeholder='Enter Name for Energy Filter'),
+        html.Br(),
+        html.Button('Save energy groups as energy filter', id='submit-energy-filter'),
+
+        html.H3('Number of Delayed Groups'),
+        dcc.Slider(
+            id='delayed-groups',
+            min=0,
+            max=10,
+            step=1,
+            value=5,
+            marks={i: i for i in range(0, 10, 1)},
+        ), html.Br(),
+        html.H3('Cross Section Library Options'),
+        dcc.Dropdown(id='xsection-types', multi=True, options=[
+            {'label': 'Total', 'value': 'total'},
+            {'label': 'Transport', 'value': 'transport'},
+            {'label': 'Nu Scatter Matrix', 'value': 'nu-scatter matrix'},
+            {'label': 'Kappa Fission', 'value': 'kappa-fission'},
+            {'label': 'Inverse Velocity', 'value': 'inverse-velocity'},
+            {'label': 'Chi Prompt', 'value': 'chi-prompt'},
+            {'label': 'Prompt Nu Fission', 'value': 'prompt-nu-fission'},
+            {'label': 'Chi Delayed', 'value': 'chi-delayed'},
+            {'label': 'Delayed Nu Fission', 'value': 'delayed-nu-fission'},
+            {'label': 'Beta', 'value': 'beta'},
+        ]),
+        html.Br(),
+        html.Button('Submit Cross-Section Configuration to Memory', id='xsection-button'),
+        html.Br(), html.Br(),
+
+        ########################################################################################################
+
+        html.H3('Spatial Mesh'),
         html.Label('Mesh x-resolution'),
         dcc.Slider(id='mesh-x-slider',
                    min=1,
@@ -69,20 +133,23 @@ layout = html.Div([
                    value=100,
                    marks={i: i for i in range(0, 1000, 100)},
                    ),
-        html.Br(),
+        html.Br(), html.Br(),
         dcc.Input(id='mesh-name', value='Cartesian', placeholder='Enter Mesh Name', type="text"),
-        html.Button('Submit Mesh', id='submit-mesh-button', n_clicks=0),
+        html.Br(),
+        html.Button('Submit Mesh as Spatial Filter', id='submit-mesh-button'),
     ]),
 
     ########################################################################################################
     # Tallies/Scores
 
     html.Div([
+
         html.H5('Select mesh filters for scoring'),
         dcc.Dropdown(id='mesh-filters-dropdown',
                      multi=True),
 
-        html.Label('Desired Scores'),
+        html.Br(),
+        html.H3('Desired Scores'),
 
         html.Div([
             html.Div([
@@ -218,72 +285,6 @@ layout = html.Div([
         ),
         html.Button('Submit Desired Scores to Memory', id='submit-scores-btn', n_clicks=0),
 
-        ########################################################################################################
-        html.H2("Cross-sections"),
-        html.H3('Number of Energy Groups'),
-        html.Br(),
-        dcc.Slider(
-            id='energy-groups',
-            min=0,
-            max=100,
-            step=1,
-            value=5,
-            marks={i: i for i in range(0, 100, 5)},
-        ), html.Br(), html.Br(),
-
-        html.Div([
-            html.Label('Energy Start [eV]'),
-            daq.NumericInput(
-                id='energy-start',
-                min=.001,
-                max=20e6,
-                value=0.001,
-                size=193,
-                # style=dict(float='left')
-            )], style=dict(position='absolute', left=10)),
-
-        dcc.RadioItems(id='energy-spacing', value='log', options=[
-            {'label': 'Linear', 'value': 'lin'},
-            {'label': 'Logarithmic', 'value': 'log'}
-        ], style=dict(position='absolute', left='45%')),
-
-        html.Div([
-            html.Label('Energy End [eV]'),
-            daq.NumericInput(
-                id='energy-end',
-                min=.001,
-                max=20e6,
-                value=20e6,
-                size=193,
-
-            )], style=dict(position='absolute', right=10)),
-
-        html.Br(), html.Br(), html.Br(),
-
-        html.H3('Number of Delayed Groups'),
-        dcc.Slider(
-            id='delayed-groups',
-            min=0,
-            max=10,
-            step=1,
-            value=5,
-            marks={i: i for i in range(0, 10, 1)},
-        ), html.Br(),
-        html.H3('Cross Section Library Options'),
-        dcc.Dropdown(id='xsection-types', multi=True, options=[
-            {'label': 'Total', 'value': 'total'},
-            {'label': 'Transport', 'value': 'transport'},
-            {'label': 'Nu Scatter Matrix', 'value': 'nu-scatter matrix'},
-            {'label': 'Kappa Fission', 'value': 'kappa-fission'},
-            {'label': 'Inverse Velocity', 'value': 'inverse-velocity'},
-            {'label': 'Chi Prompt', 'value': 'chi-prompt'},
-            {'label': 'Prompt Nu Fission', 'value': 'prompt-nu-fission'},
-            {'label': 'Chi Delayed', 'value': 'chi-delayed'},
-            {'label': 'Delayed Nu Fission', 'value': 'delayed-nu-fission'},
-            {'label': 'Beta', 'value': 'beta'},
-        ]),
-        html.Br(),
-        html.Button('Submit Cross-Section Configuration to Memory', id='xsection-button'),
         html.Div(style=dict(height=50))
     ]),
 ])
@@ -294,41 +295,58 @@ layout = html.Div([
 
 @app.callback(
     Output('mesh-stores', 'data'),
-    [Input('submit-mesh-button', 'n_clicks')],
+    [Input('submit-mesh-button', 'n_clicks'),
+     Input('submit-energy-filter', 'n_clicks')],
     [State('mesh-name', 'value'),
-     State('mesh-type', 'value'),
-     State('mesh-energy-slider', 'value'),
+
+     State('energy-filter-name', 'value'),
+
      State('mesh-x-slider', 'value'),
      State('mesh-y-slider', 'value'),
      State('mesh-z-slider', 'value'),
      State('geometry-stores', 'data'),
+
+     State('energy-groups', 'value'),
+     State('energy-start', 'value'),
+     State('energy-end', 'value'),
+     State('energy-spacing', 'value'),
+
      State('mesh-stores', 'data')])
-def mesh_creation(click, mesh_name, mesh_type, energy_resolution, x_resolution, y_resolution, z_resolution,
-                  boundary_data,
+def mesh_creation(mesh_click, energy_click,
+                  mesh_name, energy_name,
+                  x_resolution, y_resolution, z_resolution, boundary_data,
+                  energy_groups, energy_start, energy_end, energy_spacing,
                   mesh_data):
     mesh_data = mesh_data or {}
 
-    if click:
-        if mesh_type == 'energy':
-            mesh_data.update({'{}'.format(mesh_name): {'type': mesh_type,
-                                                       'energy-resolution': energy_resolution}})
+    trigger = dash.callback_context.triggered[0]
 
-        if mesh_type == 'spatial':
-            width = boundary_data['X-max'] - boundary_data['X-min']
-            depth = boundary_data['Y-max'] - boundary_data['Y-min']
-            height = boundary_data['Z-max'] - boundary_data['Z-min']
+    if 'submit-mesh-button' in trigger['prop_id']:
+        width = boundary_data['X-max'] - boundary_data['X-min']
+        depth = boundary_data['Y-max'] - boundary_data['Y-min']
+        height = boundary_data['Z-max'] - boundary_data['Z-min']
 
-            mesh_data.update({'{}'.format(mesh_name): {'type': mesh_type,
-                                                       'width': width,
-                                                       'depth': depth,
-                                                       'height': height,
-                                                       'x-resolution': x_resolution,
-                                                       'y-resolution': y_resolution,
-                                                       'z-resolution': z_resolution}})
+        mesh_data.update({'{}'.format(mesh_name): {'type': 'spatial',
+                                                   'width': width,
+                                                   'depth': depth,
+                                                   'height': height,
+                                                   'x-resolution': x_resolution,
+                                                   'y-resolution': y_resolution,
+                                                   'z-resolution': z_resolution}})
 
-        return mesh_data
+    if 'submit-energy-filter' in trigger['prop_id']:
+        mesh_data.update({'{}'.format(energy_name): {'type': 'energy',
+                                                     'energy-groups': energy_groups,
+                                                     'energy-start': energy_start,
+                                                     'energy-end': energy_end,
+                                                     'energy-spacing': energy_spacing}
+        })
+
+    print(mesh_data)
+    return mesh_data
 
 
+# TODO: Not limiting to one energy/one spatial
 @app.callback(
     Output('mesh-filters-dropdown', 'options'),
     [Input('mesh-stores', 'data')],
