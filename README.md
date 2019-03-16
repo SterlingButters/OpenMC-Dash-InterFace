@@ -47,7 +47,7 @@ https://devcenter.heroku.com/articles/s3
 - Finish Settings: https://openmc.readthedocs.io/en/stable/pythonapi/generated/openmc.Settings.html?highlight=openmc.Settings
     - Source Specification (https://openmc.readthedocs.io/en/stable/pythonapi/stats.html): 
         - Layout done -> now callbacks
-    - Others
+    - Others e.g. temperature mode and cutoff
     
 - Dispersed Knowledge/Guidance, research tooltips
 
@@ -56,7 +56,7 @@ https://devcenter.heroku.com/articles/s3
 
 #### Unnecessary Beautification Features
 - Expand Lists in Material Table
-- Add Density & Melting Point to Periodic Table
+- Add Density & Melting Point to Periodic Table: https://www.ptable.com/#Property/MeltingPoint
 - 3D Rendering of Geometry
 - Graph Cell(s)/Assembly(ies) from Memory
 - Add Snackbars to Alert User that configs have been accepted into data (easy with multi-output)

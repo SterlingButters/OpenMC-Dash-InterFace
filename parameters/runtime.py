@@ -360,6 +360,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             pitch_y = cell_data[root_geometry]['y-pitch']
             height_z = cell_data[root_geometry]['height']
 
+            # TODO: Handle radii=[0]
             cylinders = []
             cell_radii = cell_data[root_geometry]['radii']
             for r in range(len(cell_radii)):
@@ -395,26 +396,22 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
 
         # Assembly
         if root_geometry in assembly_data.keys():
-            # Main Cell
-            dim_x = cell_data[assembly_data[root_geometry]['main-cell']]['x-pitch'] * \
-                    assembly_data[root_geometry]['assembly-metrics']['assembly-num-x']
-            dim_y = cell_data[assembly_data[root_geometry]['main-cell']]['y-pitch'] * \
-                    assembly_data[root_geometry]['assembly-metrics']['assembly-num-y']
-            dim_z = cell_data[assembly_data[root_geometry]['main-cell']]['height']
+            # Pin Cell
+            pitch_x = cell_data[assembly_data[root_geometry]['main-cell']]['x-pitch']
+            pitch_y = cell_data[assembly_data[root_geometry]['main-cell']]['y-pitch']
+            height_z = cell_data[assembly_data[root_geometry]['main-cell']]['height']
 
-            # Create boundary planes to surround the geometry
-            min_x = openmc.XPlane(x0=-dim_x / 2, boundary_type='reflective')
-            max_x = openmc.XPlane(x0=+dim_x / 2, boundary_type='reflective')
-            min_y = openmc.YPlane(y0=-dim_y / 2, boundary_type='reflective')
-            max_y = openmc.YPlane(y0=+dim_y / 2, boundary_type='reflective')
-            min_z = openmc.ZPlane(z0=-dim_z / 2, boundary_type='reflective')
-            max_z = openmc.ZPlane(z0=+dim_z / 2, boundary_type='reflective')
-
+            # TODO: Handle radii=[0]
             main_cylinders = []
             main_cell_radii = cell_data[assembly_data[root_geometry]['main-cell']]['radii']
             for r in range(len(main_cell_radii)):
                 main_cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=main_cell_radii[r],
                                                        name='{} Outer Radius'.format(list(material_data.keys())[r])))
+
+            # x_neg = openmc.XPlane(x0=-pitch_x / 2, name='x-neg', boundary_type='reflective')
+            # x_pos = openmc.XPlane(x0=pitch_x / 2, name='x-pos', boundary_type='reflective')
+            # y_neg = openmc.YPlane(y0=-pitch_y / 2, name='y-neg', boundary_type='reflective')
+            # y_pos = openmc.YPlane(y0=pitch_y / 2, name='y-pos', boundary_type='reflective')
 
             MAIN_CELLS = []
             main_cell_materials = cell_data[assembly_data[root_geometry]['main-cell']]['materials']
@@ -426,15 +423,30 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             for c in range(len(main_cylinders)):
                 if c == 0:
                     MAIN_CELLS[c].region = -main_cylinders[c]
-                if c == len(main_cylinders) - 1:
-                    MAIN_CELLS[c].region = +main_cylinders[c]
-                if c > 0:
-                    MAIN_CELLS[c].region = +main_cylinders[c-1] & -main_cylinders[c]
+
+                if c < len(main_cylinders) - 1:
+                    MAIN_CELLS[c + 1].region = +main_cylinders[c] & -main_cylinders[c + 1]
+
+                elif c == len(main_cylinders) - 1:
+                    MAIN_CELLS[c + 1].region = +main_cylinders[c]  # & +x_neg & -x_pos & +y_neg & -y_pos
 
             main_universe = openmc.Universe(name='Main Pin Cell')
             main_universe.add_cells(MAIN_CELLS)
 
-            # # Create fuel assembly Lattice
+            # Assembly Cell
+            dim_x = pitch_x * assembly_data[root_geometry]['assembly-metrics']['assembly-num-x']
+            dim_y = pitch_y * assembly_data[root_geometry]['assembly-metrics']['assembly-num-y']
+            dim_z = height_z
+
+            # Create boundary planes to surround the geometry
+            min_x = openmc.XPlane(x0=-dim_x / 2, boundary_type='reflective')
+            max_x = openmc.XPlane(x0=+dim_x / 2, boundary_type='reflective')
+            min_y = openmc.YPlane(y0=-dim_y / 2, boundary_type='reflective')
+            max_y = openmc.YPlane(y0=+dim_y / 2, boundary_type='reflective')
+            min_z = openmc.ZPlane(z0=-dim_z / 2, boundary_type='reflective')
+            max_z = openmc.ZPlane(z0=+dim_z / 2, boundary_type='reflective')
+
+            # Create fuel assembly Lattice
             assembly = openmc.RectLattice(name='{}'.format(root_geometry))
             assembly.pitch = (
                 cell_data[assembly_data[root_geometry]['main-cell']]['x-pitch'],
@@ -463,11 +475,12 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
                 for c in range(len(injection_cylinders)):
                     if c == 0:
                         INJECTION_CELLS[c].region = -injection_cylinders[c]
-                    if c == len(injection_cylinders) - 1:
-                        INJECTION_CELLS[c].region = +injection_cylinders[
-                            c] & +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
-                    if c > 0:
-                        INJECTION_CELLS[c].region = +injection_cylinders[c] & -injection_cylinders[c + 1]
+
+                    if c < len(injection_cylinders) - 1:
+                        INJECTION_CELLS[c + 1].region = +injection_cylinders[c] & -injection_cylinders[c + 1]
+
+                    elif c == len(injection_cylinders) - 1:
+                        INJECTION_CELLS[c + 1].region = +injection_cylinders[c] # & +x_neg & -x_pos & +y_neg & -y_pos
 
                 injected_universe = openmc.Universe(name='{} Cell'.format(injected_cell))
                 injected_universe.add_cells(INJECTION_CELLS)

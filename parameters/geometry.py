@@ -357,9 +357,10 @@ layout = html.Div([
      State('color-stores', 'data')]
 )
 def add_color(click, color, name, data):
-    data = data or {'options': [{'label': 'Fuel', 'value': 'rgb(255, 0, 0)'},
-                                {'label': 'Clad', 'value': 'rgb(25, 255, 0)'},
-                                {'label': 'Water', 'value': 'rgb(0, 22, 255)'}]}
+    data = data or {'options': [{'label': 'Red', 'value': 'rgb(255, 0, 0)'},  # TODO: Get rid of this eventually
+                                {'label': 'Green', 'value': 'rgb(25, 255, 0)'},
+                                {'label': 'Blue', 'value': 'rgb(0, 22, 255)'},
+                                ]}
 
     options = data['options']
     color = 'rgb({}, {}, {})'.format(color['rgb']['r'], color['rgb']['g'], color['rgb']['b'])
@@ -389,18 +390,27 @@ def add_data(timestamp, data):
 # Graph Cell from Inputs
 @app.callback(
     Output('cell-graph', 'figure'),
-    [Input('planes-list', 'value'),
+    [Input('cell-pitch-x', 'value'),
+     Input('cell-pitch-y', 'value'),
+     Input('planes-list', 'value'),
      Input('material-dropdown', 'value'),
      Input('colors-dropdown', 'value')],
 )
-def create_cell(planes, materials, colors):
-    planes = [float(plane) for plane in planes.split(',')]
+def create_cell(pitch_x, pitch_y, planes, materials, colors):
+    try:
+        planes = [float(plane) for plane in planes.split(',')]
+    except:
+        pass
+
     planes.sort()
 
-    edge = planes[-1] + 0.25 * planes[-1]
-    visible_edge = planes[-1] + 0.1 * planes[-1]
-    x = np.linspace(-edge, edge, 250)
-    y = np.linspace(-edge, edge, 250)
+    edge_x = pitch_x
+    edge_y = pitch_y
+    visible_edge_x = planes[-1] + 0.1 * planes[-1]
+    visible_edge_y = planes[-1] + 0.1 * planes[-1]
+
+    x = np.linspace(-edge_x, edge_x, 250)
+    y = np.linspace(-edge_y, edge_y, 250)
 
     values = [0]
     colorscale = [[0, 'rgb(255, 255, 255)']]
@@ -415,11 +425,10 @@ def create_cell(planes, materials, colors):
         row = []
         text_row = []
         for j in y:
-
-            if np.sqrt(i ** 2 + j ** 2) < planes[0]:
-                # For HoverText
+            # Check if water hole
+            if planes == [0]:
                 if materials is None:
-                    text_row.append('Region 1')
+                    text_row.append('Hole Region')
                 else:
                     text_row.append(materials[0])
 
@@ -429,36 +438,50 @@ def create_cell(planes, materials, colors):
                 else:
                     row.append(0)
 
-            if np.sqrt(i ** 2 + j ** 2) > planes[-1]:
-                # For HoverText
-                if materials is not None and len(materials) > len(planes):
-                    text_row.append(materials[-1])
-                else:
-                    text_row.append('Region {}'.format(len(planes) + 1))
+            else:
+                if np.sqrt(i ** 2 + j ** 2) < planes[0]:
+                    # For HoverText
+                    if materials is None:
+                        text_row.append('Region 1')
+                    else:
+                        text_row.append(materials[0])
 
-                # For Colors
-                if -visible_edge < i < visible_edge and -visible_edge < j < visible_edge:
-                    if colors is not None and len(colors) > len(planes):
-                        row.append(values[-1])
+                    # For Color
+                    if colors is not None:
+                        row.append(values[0])
                     else:
                         row.append(0)
-                else:
-                    row.append(0)
 
-            for k in range(len(planes) - 1):
-                # For HoverText
-                if planes[k] < np.sqrt(i ** 2 + j ** 2) < planes[k + 1]:
-                    if materials is not None and len(materials) > 1:
-                        text_row.append(materials[k + 1])
+                if np.sqrt(i ** 2 + j ** 2) > planes[-1]:
+                    # For HoverText
+                    if materials is not None and len(materials) > len(planes):
+                        text_row.append(materials[-1])
                     else:
-                        text_row.append('Region {}'.format(k + 2))
+                        text_row.append('Region {}'.format(len(planes) + 1))
 
-                # For Colors
-                if planes[k] < np.sqrt(i ** 2 + j ** 2) < planes[k + 1]:
-                    if colors is not None and len(colors) > 1:
-                        row.append(values[k + 1])
+                    # For Colors
+                    if -visible_edge_x < i < visible_edge_x and -visible_edge_y < j < visible_edge_y:
+                        if colors is not None and len(colors) > len(planes):
+                            row.append(values[-1])
+                        else:
+                            row.append(0)
                     else:
                         row.append(0)
+
+                for k in range(len(planes) - 1):
+                    # For HoverText
+                    if planes[k] < np.sqrt(i ** 2 + j ** 2) < planes[k + 1]:
+                        if materials is not None and len(materials) > 1:
+                            text_row.append(materials[k + 1])
+                        else:
+                            text_row.append('Region {}'.format(k + 2))
+
+                    # For Colors
+                    if planes[k] < np.sqrt(i ** 2 + j ** 2) < planes[k + 1]:
+                        if colors is not None and len(colors) > 1:
+                            row.append(values[k + 1])
+                        else:
+                            row.append(0)
 
         regions.append(row)
         cell_hover.append(text_row)
@@ -490,9 +513,9 @@ def create_cell(planes, materials, colors):
 
     layout = dict(title='Cell Region Depiction',
                   xaxis=dict(fixedrange=True,
-                             range=[-visible_edge, visible_edge]),
+                             range=[-visible_edge_x, visible_edge_x]),
                   yaxis=dict(fixedrange=True,
-                             range=[-visible_edge, visible_edge]),
+                             range=[-visible_edge_y, visible_edge_y]),
                   height=500,
                   width=500,
                   shapes=shapes)
@@ -516,11 +539,11 @@ def create_cell(planes, materials, colors):
      State('colors-dropdown', 'value'),
      State('cell-stores', 'data')]
 )
-def store_cell(clicks, name, planes, x_pitch, y_pitch, height, materials, colors, data):
+def store_cell(clicks, name, planes, x_pitch, y_pitch, height, materials, colors, cell_data):
     if clicks is None:
         raise PreventUpdate
 
-    data = data or {}
+    cell_data = cell_data or {}
 
     planes = [float(plane) for plane in planes.split(',')]
     planes.sort()
@@ -537,19 +560,19 @@ def store_cell(clicks, name, planes, x_pitch, y_pitch, height, materials, colors
     elif materials is None:
         print("Must have at least one material")
 
-    elif len(materials) != len(planes) + 1:
+    elif len(materials) != len(planes) + 1 and planes != [0]:
         print("Material/Radial Planes requirement mismatch")
 
     else:
-        data.update({'{}'.format(name): {'x-pitch': x_pitch,
-                                         'y-pitch': y_pitch,
-                                         'height': height,
-                                         'radii': planes,
-                                         'materials': materials,
-                                         'colors': colors}})
+        cell_data.update({'{}'.format(name): {'x-pitch': x_pitch,
+                                              'y-pitch': y_pitch,
+                                              'height': height,
+                                              'radii': planes,
+                                              'materials': materials,
+                                              'colors': colors}})
 
-        # print(data)
-        return data
+        print(cell_data)
+        return cell_data
 
 
 #######################################################################################################################
@@ -696,8 +719,6 @@ def fill_assembly(data, assembly_data):
     main_cell = assembly_data['main-cell'] if assembly_data else None
 
     if data and main_cell:
-        # assembly_dim_x = assembly_data['assembly-metrics']['assembly-dim-x']
-        # assembly_dim_y = assembly_data['assembly-metrics']['assembly-dim-y']
         assembly_num_x = assembly_data['assembly-metrics']['assembly-num-x']
         assembly_num_y = assembly_data['assembly-metrics']['assembly-num-y']
 
