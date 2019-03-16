@@ -1,16 +1,16 @@
-import json
 import os
+
 import dash
 import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
 import numpy as np
+import openmc
 import pandas as pd
 import plotly.figure_factory as ff
 import plotly.graph_objs as go
 from dash.dependencies import Output, State, Input
 from dash.exceptions import PreventUpdate
-import openmc
 
 from app import app
 
@@ -196,6 +196,7 @@ layout = html.Div([
                                 size=193, style=dict(position='absolute', left=10)
                             ), html.Br(), html.Br(), html.Br(), html.Br(),
                             html.Button('Submit Material', id='submit-material-button', n_clicks_timestamp=0),
+                            html.Div(id='material-message')
                         ],
                             style=dict(
                                 display='table-cell',
@@ -264,7 +265,8 @@ layout = html.Div([
 
                             daq.ToggleSwitch(id='composition-option', label='Atomic Percent/Weight Percent',
                                              value=False), html.Br(),
-                            html.Button('Submit Element/Isotope', id='submit-isotope-button', n_clicks_timestamp=0)
+                            html.Button('Submit Element/Isotope', id='submit-isotope-button', n_clicks_timestamp=0),
+                            html.Div(id='isotope-message')
                         ],
                             style=dict(
                                 display='table-cell',
@@ -396,7 +398,7 @@ def graph_xsection(clickData, atomic_mass):
     return dcc.Graph(figure=figure)
 
 
-# Submit material, element/isotope into memory
+# Store Material and Isotope Data
 @app.callback(
     Output('material-stores', 'data'),
     [Input('submit-material-button', 'n_clicks_timestamp'),
@@ -417,105 +419,106 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
                    clickData, mass, composition_option, percent_composition, material_data):
     # material_data = material_data or {}
     material_data = material_data or {
-                                      "Fuel": {
-                                        "density": 10.29769,
-                                        # "temperature": 1200,
-                                        "elements": [
-                                          "U",
-                                          "U",
-                                          "U",
-                                          "O"
-                                        ],
-                                        "masses": [
-                                          234,
-                                          235,
-                                          238,
-                                          16
-                                        ],
-                                        "compositions": [
-                                          .0000044843,
-                                          .00055815,
-                                          .022408,
-                                          .045829
-                                        ],
-                                        "types": [
-                                          "ao",
-                                          "ao",
-                                          "ao",
-                                          "ao"
-                                        ]
-                                      },
-                                      "Clad": {
-                                        "density": 6.55,
-                                        # "temperature": 900,
-                                        "elements": [
-                                          "Zr",
-                                          "Zr",
-                                          "Zr",
-                                          "Zr",
-                                          "Zr"
-                                        ],
-                                        "masses": [
-                                          90,
-                                          91,
-                                          92,
-                                          94,
-                                          96
-                                        ],
-                                        "compositions": [
-                                          .021827,
-                                          .0047600,
-                                          .0072758,
-                                          .0073734,
-                                          .0011879
-                                        ],
-                                        "types": [
-                                          "ao",
-                                          "ao",
-                                          "ao",
-                                          "ao",
-                                          "ao"
-                                        ]
-                                      },
-                                      "Water": {
-                                        "density": 0.740582,
-                                        # "temperature": 700,
-                                        "elements": [
-                                          "H",
-                                          "O",
-                                          "B",
-                                          "B"
-                                        ],
-                                        "masses": [
-                                          1,
-                                          16,
-                                          10,
-                                          11
-                                        ],
-                                        "compositions": [
-                                          .049457,
-                                          .024672,
-                                          .0000080042,
-                                          .000032218
-                                        ],
-                                        "types": [
-                                          "ao",
-                                          "ao",
-                                          "ao",
-                                          "ao"
-                                        ]
-                                      },
-                                    }
+        "Fuel": {
+            "density": 10.29769,
+            # "temperature": 1200,
+            "elements": [
+                "U",
+                "U",
+                "U",
+                "O"
+            ],
+            "masses": [
+                234,
+                235,
+                238,
+                16
+            ],
+            "compositions": [
+                .0000044843,
+                .00055815,
+                .022408,
+                .045829
+            ],
+            "types": [
+                "ao",
+                "ao",
+                "ao",
+                "ao"
+            ]
+        },
+        "Clad": {
+            "density": 6.55,
+            # "temperature": 900,
+            "elements": [
+                "Zr",
+                "Zr",
+                "Zr",
+                "Zr",
+                "Zr"
+            ],
+            "masses": [
+                90,
+                91,
+                92,
+                94,
+                96
+            ],
+            "compositions": [
+                .021827,
+                .0047600,
+                .0072758,
+                .0073734,
+                .0011879
+            ],
+            "types": [
+                "ao",
+                "ao",
+                "ao",
+                "ao",
+                "ao"
+            ]
+        },
+        "Water": {
+            "density": 0.740582,
+            # "temperature": 700,
+            "elements": [
+                "H",
+                "O",
+                "B",
+                "B"
+            ],
+            "masses": [
+                1,
+                16,
+                10,
+                11
+            ],
+            "compositions": [
+                .049457,
+                .024672,
+                .0000080042,
+                .000032218
+            ],
+            "types": [
+                "ao",
+                "ao",
+                "ao",
+                "ao"
+            ]
+        },
+    }
 
     trigger = dash.callback_context.triggered[0]
     if 'submit-material-button' in trigger['prop_id']:
-        if None in [material_name, material_density]:
-            print("A Material Parameter remains Unfilled")
+        if None or '' in [material_name, material_density]:
+            print('A Material Parameter remains Unfilled')
         else:
             material_data.update({'{}'.format(material_name):
                                       {'density': material_density,
                                        'temperature': material_temperature}
                                   })
+
         return material_data
 
     if 'submit-isotope-button' in trigger['prop_id']:
@@ -526,17 +529,15 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
         composition_type = 'wo' if composition_option is True else 'ao'
 
         if selected_material is None:
-            message = 'A material must be specified'
+            print('A Material must be specified')
         elif percent_composition is None:
-            message = 'A Composition percentage must be specified'
+            print('A Composition percentage must be specified')
         else:
-            message = '{}-{} has been added to {} at {}% ({})'.format(mass,
+            print('{}-{} has been added to {} at {}% ({})'.format(mass,
                                                                       chosen_element,
                                                                       selected_material,
                                                                       percent_composition,
-                                                                      composition_type)
-        print(message)
-
+                                                                      composition_type))
         material = material_data[selected_material]
 
         try:
@@ -561,6 +562,7 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
              'compositions': compositions,
              'types': types}
         )
+
         return material_data
 
 

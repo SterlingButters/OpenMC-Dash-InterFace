@@ -205,7 +205,10 @@ layout = html.Div([
     html.P("Number of assemblies in y dimension"),
     dcc.Input(id='core-y-dim', placeholder='Enter Assemblies in y-dimension',
               type='number', value=20),
-    # html.Div(id='core-container'),
+    dcc.Dropdown('assembly-dropdown'),
+    html.Button('Inject Assembly into Core', id='inject-assembly-btn'),
+    html.Div(id='display-assembly-indices'),
+    html.Div(id='core-container'),
 
     ################################################################################
     html.H3('Root Geometry'),
@@ -386,7 +389,6 @@ def add_data(timestamp, data):
 
 ###########################################
 
-# TODO: Support for water holes i.e. planes = [0]
 # Graph Cell from Inputs
 @app.callback(
     Output('cell-graph', 'figure'),
@@ -525,7 +527,6 @@ def create_cell(pitch_x, pitch_y, planes, materials, colors):
     return figure
 
 
-# TODO: Support for water holes i.e. planes = [0]
 # Commit Cell to memory
 @app.callback(
     Output('cell-stores', 'data'),
@@ -642,7 +643,7 @@ def print_selected_cells(clickData, selectedData, clicks, injection_cell, data):
 
     trigger = dash.callback_context.triggered[0]
 
-    if selectedData and injection_cell:
+    if 'selectedData' in trigger['prop_id']:
         xs = [point['x'] for point in selectedData['points']]
         ys = [point['y'] for point in selectedData['points']]
         for i in range(len(xs)):
@@ -651,9 +652,9 @@ def print_selected_cells(clickData, selectedData, clicks, injection_cell, data):
             else:
                 selected_cells.remove([xs[i], ys[i]])
 
-    if clickData and injection_cell:
-        x = clickData['points'][0]['x']
-        y = clickData['points'][0]['y']
+    if 'clickData' in trigger['prop_id']:
+        x = clickData['points'][1]['x']
+        y = clickData['points'][1]['y']
         if [x, y] not in selected_cells:
             selected_cells.append([x, y])
         else:
@@ -763,7 +764,6 @@ def fill_assembly(data, assembly_data):
                             }
                             shapes.append(shape)
 
-                    # Index is
                     else:
                         for cell_name in assembly_data['injected-cells'].keys():
                             if [b, a] in assembly_data['injected-cells'][cell_name]['indices']:
@@ -840,6 +840,7 @@ def fill_assembly(data, assembly_data):
 
         centers = go.Scatter(x=x_centers.flatten(),
                              y=y_centers.flatten(),
+                             hoverinfo='none',
                              mode='markers',
                              opacity=0)
 
@@ -876,47 +877,130 @@ def store_to_assemblies(click, assembly_name, assembly_data, all_assembly_data):
 #######################################################################################################################
 # Full-Core
 # TODO: Make core fillable
-# @app.callback(
-#     Output('core-container', 'children'),
-#     [Input('core-x-dim', 'value'),
-#      Input('core-y-dim', 'value')]
-# )
-# def create_core(core_num_x, core_num_y):
-#     assembly_region = np.ones((core_num_x, core_num_y))
-#
-#     heatmap = go.Heatmap(z=assembly_region,
-#                          hoverinfo='x+y+text',
-#                          # text=core_hover,
-#                          # colorscale=colorscale,
-#                          showscale=False,
-#                          opacity=.3)
-#
-#     data = [heatmap]
-#
-#     layout = dict(
-#         title='Core Depiction',
-#         height=1250,
-#         width=1500,
-#
-#         xaxis=dict(
-#             # range=[,],
-#             zeroline=False,
-#             fixedrange=True,
-#             ticks='',
-#             nticks=core_num_x+1
-#         ),
-#         yaxis=dict(
-#             # range=[,],
-#             zeroline=False,
-#             fixedrange=True,
-#             ticks='',
-#             nticks=core_num_y + 1
-#         ),
-#     )
-#
-#     figure = go.Figure(data=data, layout=layout)
-#
-#     return dcc.Graph(figure=figure)
+
+@app.callback(
+    Output('assembly-dropdown', 'options'),
+    [Input('assembly-stores', 'data')]
+)
+def populate_dropdown(assembly_data):
+    options = []
+    for assembly_name in assembly_data.keys():
+        options.append({'label': assembly_name, 'value': assembly_name})
+    return options
+
+
+@app.callback(
+    Output('display-assembly-indices', 'children'),
+    [Input('assembly-injection-stores', 'modified_timestamp')],
+    [State('assembly-injection-stores', 'data')]
+)
+def show_selection_locations(timestamp, data):
+    if timestamp is None:
+        raise PreventUpdate
+    if data:
+        return html.P('{}'.format(str(data['selected-assemblies'])))
+
+
+@app.callback(
+    Output('assembly-injection-stores', 'data'),
+    [Input('core-graph', 'clickData'),
+     Input('core-graph', 'selectedData'),
+     Input('inject-assembly-btn', 'n_clicks')],
+    [State('assembly-dropdown', 'value'),
+     State('assembly-injection-stores', 'data')]
+)
+def store_selected_assemblies(clickData, selectedData, clicks, injection_assembly, data):
+    if not dash.callback_context.triggered:
+        raise PreventUpdate
+
+    data = data or {'selected-assemblies': []}
+    selected_assemblies = data['selected-assemblies']
+
+    trigger = dash.callback_context.triggered[0]
+
+    if 'selectedData' in trigger['prop_id']:
+        print(selectedData)
+        xs = [point['x'] for point in selectedData['points']]
+        ys = [point['y'] for point in selectedData['points']]
+        for i in range(len(xs)):
+            if [xs[i], ys[i]] not in selected_assemblies:
+                selected_assemblies.append([xs[i], ys[i]])
+            else:
+                selected_assemblies.remove([xs[i], ys[i]])
+
+    if 'clickData' in trigger['prop_id']:
+        print(clickData)
+        x = clickData['points'][1]['x']
+        y = clickData['points'][1]['y']
+        if [x, y] not in selected_assemblies:
+            selected_assemblies.append([x, y])
+        else:
+            selected_assemblies.remove([x, y])
+
+    if 'btn' in trigger['prop_id']:
+        selected_assemblies = []
+
+    print(selected_assemblies)
+    return {'selected-assemblies': selected_assemblies}
+
+
+@app.callback(
+    Output('core-container', 'children'),
+    [Input('core-x-dim', 'value'),
+     Input('core-y-dim', 'value')],
+    # [State('core-stores', 'data')]
+)
+def create_core(core_num_x, core_num_y):  # core_data):
+    assembly_region = np.ones((core_num_x, core_num_y))
+
+    # Add centers for selection tool
+    x_centers, y_centers = np.meshgrid(np.arange(np.shape(assembly_region)[0]),
+                                       np.arange(np.shape(assembly_region)[1]))
+
+    centers = go.Scatter(x=x_centers.flatten(),
+                         y=y_centers.flatten(),
+                         mode='markers',
+                         marker=dict(symbol='square',
+                                     size=55,
+                                     color=0),
+                         hoverinfo='none',
+                         opacity=.2)
+
+    heatmap = go.Heatmap(z=assembly_region,
+                         hoverinfo='x+y+text',
+                         # text=core_hover,
+                         # colorscale=colorscale,
+                         showscale=False,
+                         opacity=.5,
+                         xgap=1,
+                         ygap=1)
+
+    data = [heatmap, centers]
+
+    layout = dict(
+        title='Core Depiction',
+        height=1350,
+        width=1350,
+
+        xaxis=dict(
+            range=[-.5, core_num_x - .5],
+            zeroline=False,
+            fixedrange=True,
+            ticks='',
+            nticks=core_num_x + 1
+        ),
+        yaxis=dict(
+            range=[-.5, core_num_y - .5],
+            zeroline=False,
+            fixedrange=True,
+            ticks='',
+            nticks=core_num_y + 1
+        ),
+    )
+
+    figure = go.Figure(data=data, layout=layout)
+
+    return dcc.Graph(figure=figure, id='core-graph')
 
 
 #######################################################################################################################

@@ -30,6 +30,8 @@ app.layout = html.Div([
     dcc.Store(id='injection-stores', storage_type='session'),
     dcc.Store(id='temp-assembly-stores', storage_type='session'),
     dcc.Store(id='assembly-stores', storage_type='session'),
+    dcc.Store(id='assembly-injection-stores', storage_type='session'),
+    # dcc.Store(id='core-stores', storage_type='session'),
     dcc.Store(id='geometry-stores', storage_type='session'),
     # Mesh
     dcc.Store(id='mesh-stores', storage_type='session'),
@@ -42,7 +44,7 @@ app.layout = html.Div([
     dcc.Store(id='source-stores', storage_type='session'),
     dcc.Store(id='settings-stores', storage_type='session'),
 
-    dcc.Tabs(id="tabs", value='postprocessing', children=[
+    dcc.Tabs(id="tabs", value='geometry', children=[
         dcc.Tab(label='Materials', value='materials'),
         dcc.Tab(label='Geometry', value='geometry'),
         dcc.Tab(label='Mesh, Tallies, and Cross-Sections', value='mesh-tallies-xsections'),

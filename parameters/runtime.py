@@ -404,14 +404,10 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             # TODO: Handle radii=[0]
             main_cylinders = []
             main_cell_radii = cell_data[assembly_data[root_geometry]['main-cell']]['radii']
+
             for r in range(len(main_cell_radii)):
                 main_cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=main_cell_radii[r],
                                                        name='{} Outer Radius'.format(list(material_data.keys())[r])))
-
-            # x_neg = openmc.XPlane(x0=-pitch_x / 2, name='x-neg', boundary_type='reflective')
-            # x_pos = openmc.XPlane(x0=pitch_x / 2, name='x-pos', boundary_type='reflective')
-            # y_neg = openmc.YPlane(y0=-pitch_y / 2, name='y-neg', boundary_type='reflective')
-            # y_pos = openmc.YPlane(y0=pitch_y / 2, name='y-pos', boundary_type='reflective')
 
             MAIN_CELLS = []
             main_cell_materials = cell_data[assembly_data[root_geometry]['main-cell']]['materials']
@@ -428,7 +424,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
                     MAIN_CELLS[c + 1].region = +main_cylinders[c] & -main_cylinders[c + 1]
 
                 elif c == len(main_cylinders) - 1:
-                    MAIN_CELLS[c + 1].region = +main_cylinders[c]  # & +x_neg & -x_pos & +y_neg & -y_pos
+                    MAIN_CELLS[c + 1].region = +main_cylinders[c]
 
             main_universe = openmc.Universe(name='Main Pin Cell')
             main_universe.add_cells(MAIN_CELLS)
@@ -448,9 +444,8 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
 
             # Create fuel assembly Lattice
             assembly = openmc.RectLattice(name='{}'.format(root_geometry))
-            assembly.pitch = (
-                cell_data[assembly_data[root_geometry]['main-cell']]['x-pitch'],
-                cell_data[assembly_data[root_geometry]['main-cell']]['y-pitch'])
+            assembly.pitch = (cell_data[assembly_data[root_geometry]['main-cell']]['x-pitch'],
+                              cell_data[assembly_data[root_geometry]['main-cell']]['y-pitch'])
             assembly.lower_left = (-dim_x / 2, -dim_y / 2)
             # noinspection PyTypeChecker
             assembly.universes = np.tile(main_universe,
@@ -458,29 +453,37 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
                                           assembly_data[root_geometry]['assembly-metrics']['assembly-num-y']))
 
             for injected_cell in assembly_data[root_geometry]['injected-cells'].keys():
-                injection_cylinders = []
                 injection_cell_radii = cell_data[injected_cell]['radii']
-                for r in range(len(injection_cell_radii)):
-                    injection_cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=injection_cell_radii[r],
-                                                                name='{} Outer Radius'.format(
-                                                                    list(material_data.keys())[r])))
-
-                INJECTION_CELLS = []
                 injected_cell_materials = cell_data[injected_cell]['materials']
-                for m in range(len(injected_cell_materials)):
-                    cell = openmc.Cell(name='{}'.format(injected_cell_materials[m]),
-                                       fill=MATERIALS_DICT[injected_cell_materials[m]])
-                    INJECTION_CELLS.append(cell)
 
-                for c in range(len(injection_cylinders)):
-                    if c == 0:
-                        INJECTION_CELLS[c].region = -injection_cylinders[c]
+                if injection_cell_radii != [0]:
+                    injection_cylinders = []
 
-                    if c < len(injection_cylinders) - 1:
-                        INJECTION_CELLS[c + 1].region = +injection_cylinders[c] & -injection_cylinders[c + 1]
+                    for r in range(len(injection_cell_radii)):
+                        injection_cylinders.append(openmc.ZCylinder(x0=0, y0=0, R=injection_cell_radii[r],
+                                                                    name='{} Outer Radius'.format(
+                                                                        list(material_data.keys())[r])))
 
-                    elif c == len(injection_cylinders) - 1:
-                        INJECTION_CELLS[c + 1].region = +injection_cylinders[c] # & +x_neg & -x_pos & +y_neg & -y_pos
+                    INJECTION_CELLS = []
+                    for m in range(len(injected_cell_materials)):
+                        cell = openmc.Cell(name='{}'.format(injected_cell_materials[m]),
+                                           fill=MATERIALS_DICT[injected_cell_materials[m]])
+                        INJECTION_CELLS.append(cell)
+
+                    for c in range(len(injection_cylinders)):
+                        if c == 0:
+                            INJECTION_CELLS[c].region = -injection_cylinders[c]
+
+                        if c < len(injection_cylinders) - 1:
+                            INJECTION_CELLS[c + 1].region = +injection_cylinders[c] & -injection_cylinders[c + 1]
+
+                        elif c == len(injection_cylinders) - 1:
+                            INJECTION_CELLS[c + 1].region = +injection_cylinders[c]
+
+                # Handle Water Hole Cell -> 1 material, no radial planes
+                else:
+                    INJECTION_CELLS = [openmc.Cell(name='{}'.format(injected_cell_materials[0]),
+                                                   fill=MATERIALS_DICT[injected_cell_materials[0]])]
 
                 injected_universe = openmc.Universe(name='{} Cell'.format(injected_cell))
                 injected_universe.add_cells(INJECTION_CELLS)

@@ -29,7 +29,6 @@ https://devcenter.heroku.com/articles/s3
 
 ### Current release TODO List
 ##### Geometry:
-- SUPPORT WATER HOLES (planes = [0])
 - Set Max Geometrical Boundaries based on Root Geometry in (%)
     - Getting weird behavior
 ##### Mesh:
@@ -37,7 +36,6 @@ https://devcenter.heroku.com/articles/s3
 ##### Tallies & Settings:
 ##### Other:
 - Clean up with dash multi-output support (esp `Store` components)
-- Document and comment code for collaboration
 
 ### Next Release Features
 - Post Processing -> Clean up interface, handle uploaded files, etc
