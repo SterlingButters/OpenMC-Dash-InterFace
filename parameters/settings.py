@@ -1,3 +1,5 @@
+import json
+
 import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
@@ -36,9 +38,6 @@ layout = html.Div([
             html.H4('Miscellaneous'),
             daq.BooleanSwitch(id='trigger-active', label='Trigger Active', labelPosition='right',
                               style=dict(position='absolute', left=0)), html.Br(), html.Br(),
-            # keff_trigger = dict
-            # trigger_batch_interval = int
-            # trigger_max_batches = int
 
             daq.BooleanSwitch(id='no-reduce', label='No Reduce', labelPosition='right', on=False,
                               style=dict(position='absolute', left=0)), html.Br(), html.Br(),
@@ -54,14 +53,6 @@ layout = html.Div([
                               style=dict(position='absolute', left=0)), html.Br(), html.Br(),
             daq.BooleanSwitch(id='fission-neutrons', label='Create Fission Neutrons', labelPosition='right', on=True,
                               style=dict(position='absolute', left=0)), html.Br(), html.Br(),
-            # ufs_mesh = openmc.Mesh
-            # volume_calculations = iterable of VolumeCalculation
-            # resonance_scattering = dict
-
-            # tabular_legendre (dict) – Determines if a multi-group scattering moment kernel expanded via Legendre polynomials
-            # is to be converted to a tabular distribution or not. Accepted keys are ‘enable’ and ‘num_points’. The value for
-            # ‘enable’ is a bool stating whether the conversion to tabular is performed; the value for ‘num_points’ sets the
-            # number of points to use in the tabular distribution, should ‘enable’ be True.
 
             html.H4('Outputs'),
             daq.BooleanSwitch(id='output-summary', label='Output Summary', labelPosition='right', on=True,
@@ -69,8 +60,8 @@ layout = html.Div([
             daq.BooleanSwitch(id='output-tallies', label='Output Tallies', labelPosition='right', on=True,
                               style=dict(position='absolute', left=0)), html.Br(), html.Br(),
             html.Label('Verbosity'),
-            dcc.Slider(id='verbosity', min=0, max=10, step=1, value=7),
-
+            dcc.Slider(id='verbosity', min=0, max=10, step=1, value=7, marks={i: i for i in range(0, 10, 1)}),
+            html.Br(), html.Br(),
             html.Button('Submit Settings to Memory', id='submit-settings-btn', n_clicks=0)
         ], style=dict(
             display='table-cell',
@@ -105,7 +96,8 @@ layout = html.Div([
 
             html.Div([
                 html.H6('Weight'),
-                html.P('Value for ‘weight’ should be a float indicating weight cutoff below which particle undergo Russian roulette.'),
+                html.P(
+                    'Value for ‘weight’ should be a float indicating weight cutoff below which particle undergo Russian roulette.'),
                 daq.NumericInput(id='cutoff-weight',
                                  value=0,
                                  size=150,
@@ -114,7 +106,8 @@ layout = html.Div([
 
             html.Div([
                 html.H6('Average Weight'),
-                html.P('Value for ‘weight_avg’ should be a float indicating weight assigned to particles that are not killed after Russian roulette.'),
+                html.P(
+                    'Value for ‘weight_avg’ should be a float indicating weight assigned to particles that are not killed after Russian roulette.'),
                 daq.NumericInput(id='cutoff-weight-avg',
                                  value=0,
                                  size=150,
@@ -123,7 +116,8 @@ layout = html.Div([
 
             html.Div([
                 html.H6('Energy'),
-                html.P('Value of energy should be a float indicating energy in eV below which particle will be killed.'),
+                html.P(
+                    'Value of energy should be a float indicating energy in eV below which particle will be killed.'),
                 daq.NumericInput(id='cutoff-energy',
                                  value=0,
                                  size=150,
@@ -368,6 +362,61 @@ layout = html.Div([
                 {'label': 'Legendre', 'value': 'legendre'},
                 {'label': 'Mixture', 'value': 'mixture'},
             ]),
+
+            html.Div([
+                html.H6('Discrete Parameters'),
+                html.Label('Values'),
+                dcc.Input(id='energy-discrete-values', placeholder='Comma separated list of values'),
+                html.Label('Probabilities'),
+                dcc.Input(id='energy-discrete-probs', placeholder='Comma separated list of probabilities')
+            ], id='energy-discrete-params'),
+
+            html.Div([
+                html.H6('Uniform Parameters'),
+                html.Label('a'),
+                daq.NumericInput(id='energy-uniform-a', value=0, size=150),
+                html.Label('b'),
+                daq.NumericInput(id='energy-uniform-b', value=0, size=150),
+            ], id='energy-uniform-params'),
+
+            html.Div([
+                html.H6('Maxwell Parameters'),
+                html.Label('Temperature'),
+                daq.NumericInput(id='energy-maxwell-t', value=0, size=150),
+            ], id='energy-maxwell-params'),
+
+            html.Div([
+                html.H6('Watt Parameters'),
+                html.Label('a'),
+                daq.NumericInput(id='energy-watt-a', value=0, size=150),
+                html.Label('b'),
+                daq.NumericInput(id='energy-watt-b', value=0, size=150),
+            ], id='energy-watt-params'),
+
+            html.Div([
+                html.H6('Tabular Parameters'),
+                html.Label('Values'),
+                dcc.Input(id='energy-tabular-values', placeholder='Comma separated list of values'),
+                html.Label('Probabilities'),
+                dcc.Input(id='energy-tabular-probs', placeholder='Comma separated list of probabilities'),
+                dcc.Dropdown(id='energy-interpolation', value='linear-linear', options=[
+                    {'label': 'Histogram', 'value': 'histogram'},
+                    {'label': 'Linear-Linear', 'value': 'linear-linear'},
+                    {'label': 'Linear-Logarithmic', 'value': 'linear-log'},
+                    {'label': 'Logarithmic-Linear', 'value': 'log-linear'},
+                    {'label': 'Logarithmic-Logarithmic', 'value': 'log-log'},
+                ])
+            ], id='energy-tabular-params'),
+
+            html.Div([
+                html.H6('Legendre Parameters'),
+                html.Label('Legendre Polynomial Coefficients'),
+                dcc.Input(id='energy-legendre-coeffs', placeholder='Comma separated list of coefficients'),
+            ], id='energy-legendre-params'),
+
+            # Mixture Parameters
+            # TODO
+
             html.Label('Source Strength'),
             dcc.Slider(id='source-strength', value=1.0, min=0, max=10, step=0.1),
 
@@ -377,11 +426,7 @@ layout = html.Div([
             html.Button('Add Source', id='add-source-btn'),
 
             html.H3('List of Sources'),
-            dcc.Dropdown(id='source-dropdown'),
-
-            # model.settings.entropy_mesh = openmc.mesh
-            # max_order = None or int
-            # multipole_library = 'path'
+            dcc.Dropdown(id='source-dropdown', multi=True),
 
         ], style=dict(
             display='table-cell',
@@ -464,6 +509,7 @@ def hide_elements(temp_mode_selections):
 
     return dict(display='none'), dict(display='none'), dict(display='none'), dict(display='none')
 
+
 ################################################
 # Spatial Hide/Show
 @app.callback(
@@ -496,32 +542,22 @@ def hide_bounds(on):
 # Angular Hide/Show
 @app.callback(
     [Output('mu-or-phi', 'style'),
-     Output('reference-uvw', 'style')],
+     Output('reference-uvw', 'style'),
+     Output('angular-probability', 'style')],
     [Input('stats-angular', 'value')]
 )
 def hide_elements(source_angular):
     if source_angular == 'polar-azimuthal':
-        return dict(), dict()
+        return dict(), dict(), dict()
 
     elif source_angular == 'mono-directional':
-        return dict(display='none'), dict()
+        return dict(display='none'), dict(), dict(display='none')
 
     elif source_angular == 'isotropic':
-        return dict(display='none'), dict(display='none')
+        return dict(display='none'), dict(display='none'), dict(display='none')
 
     else:
-        return dict(display='none'), dict(display='none')
-
-
-@app.callback(
-    Output('angular-probability', 'style'),
-    [Input('mu-or-phi', 'value')]
-)
-def hide_elements(mu_or_phi):
-    if mu_or_phi:
-        return dict()
-    else:
-        return dict(display='none')
+        return dict(display='none'), dict(display='none'), dict(display='none')
 
 
 @app.callback(
@@ -559,8 +595,48 @@ def hide_elements(probability_type):
             display='none'), dict(),
 
 
+@app.callback(
+    [Output('energy-discrete-params', 'style'),
+     Output('energy-uniform-params', 'style'),
+     Output('energy-maxwell-params', 'style'),
+     Output('energy-watt-params', 'style'),
+     Output('energy-tabular-params', 'style'),
+     Output('energy-legendre-params', 'style')],
+    [Input('stats-energy', 'value')]
+)
+def hide_elements(probability_type):
+    if probability_type == 'discrete':
+        return dict(), dict(display='none'), dict(display='none'), dict(display='none'), dict(display='none'), dict(
+            display='none')
+
+    elif probability_type == 'uniform':
+        return dict(display='none'), dict(), dict(display='none'), dict(display='none'), dict(display='none'), dict(
+            display='none')
+
+    elif probability_type == 'maxwell':
+        return dict(display='none'), dict(display='none'), dict(), dict(display='none'), dict(display='none'), dict(
+            display='none')
+
+    elif probability_type == 'watt':
+        return dict(display='none'), dict(display='none'), dict(display='none'), dict(), dict(display='none'), dict(
+            display='none')
+
+    elif probability_type == 'tabular':
+        return dict(display='none'), dict(display='none'), dict(display='none'), dict(display='none'), dict(), dict(
+            display='none')
+
+    elif probability_type == 'legendre':
+        return dict(display='none'), dict(display='none'), dict(display='none'), dict(display='none'), dict(
+            display='none'), dict()
+
+    else:
+        return dict(display='none'), dict(display='none'), dict(display='none'), dict(display='none'), dict(
+            display='none'), dict(display='none')
+
+
 ################################################
 # Actual Callbacks to store data
+
 @app.callback(
     Output('mu-phi-stores', 'data'),
     [Input('submit-prob-mu-phi', 'n_clicks')],
@@ -653,6 +729,20 @@ def store_mu_phi_prob(click, mu_or_phi, stats_probability,
      State('reference-v', 'value'),
      State('reference-w', 'value'),
 
+     State('stats-energy', 'value'),
+     State('energy-discrete-values', 'value'),
+     State('energy-discrete-probs', 'value'),
+     State('energy-uniform-a', 'value'),
+     State('energy-uniform-b', 'value'),
+     State('energy-maxwell-t', 'value'),
+     State('energy-watt-a', 'value'),
+     State('energy-watt-b', 'value'),
+     State('energy-tabular-values', 'value'),
+     State('energy-tabular-probs', 'value'),
+     State('energy-legendre-coeffs', 'value'),
+
+     State('source-strength', 'value'),
+
      State('mu-phi-stores', 'data'),
      State('source-stores', 'data')]
 )
@@ -662,6 +752,13 @@ def store_settings(click, source_name, stats_spatial,
                    box_lower_x, box_lower_y, box_lower_z,
                    box_upper_x, box_upper_y, box_upper_z,
                    stats_angular, reference_u, reference_v, reference_w,
+                   stats_energy,
+                   energy_discrete_values, energy_discrete_probs,
+                   energy_uniform_a, energy_uniform_b,
+                   energy_maxwell_t, energy_watt_a, energy_watt_b,
+                   energy_tabular_values, energy_tabular_probs,
+                   energy_legendre_coeffs,
+                   source_strength,
                    mu_phi_data, source_data):
     source_data = source_data or {}
     if click:
@@ -677,17 +774,33 @@ def store_settings(click, source_name, stats_spatial,
                                  'box-upper-x': box_upper_x,
                                  'box-upper-y': box_upper_y,
                                  'box-upper-z': box_upper_z,
-                                 'stats-angular': stats_angular,
-                                 'reference-u': reference_u,
-                                 'reference-v': reference_v,
-                                 'reference-w': reference_w}
+                                 'source-strength': source_strength}
                             })
+        if stats_angular:
+            source_data[source_name].update({'stats-angular': stats_angular,
+                                             'reference-u': reference_u,
+                                             'reference-v': reference_v,
+                                             'reference-w': reference_w})
+
         if mu_phi_data:
             if 'mu' in mu_phi_data:
                 source_data[source_name].update({'mu': mu_phi_data['mu']})
 
             if 'phi' in mu_phi_data:
                 source_data[source_name].update({'phi': mu_phi_data['phi']})
+
+        if stats_energy:
+            source_data[source_name].update({'stats-energy': stats_energy,
+                                             'energy-discrete-values': energy_discrete_values,
+                                             'energy-discrete-probs': energy_discrete_probs,
+                                             'energy-uniform-a': energy_uniform_a,
+                                             'energy-uniform-b': energy_uniform_b,
+                                             'energy-maxwell-t': energy_maxwell_t,
+                                             'energy-watt-a': energy_watt_a,
+                                             'energy-watt-b': energy_watt_b,
+                                             'energy-tabular-values': energy_tabular_values,
+                                             'energy-tabular-probs': energy_tabular_probs,
+                                             'energy-legendre-coeffs': energy_legendre_coeffs})
 
     print(source_data)
     return source_data
@@ -705,8 +818,6 @@ def populate_dropdown(source_data):
     return options
 
 
-# TODO: Add source data into setting-stores
-# TODO: Add cutoff data into setting-stores
 @app.callback(
     Output('settings-stores', 'data'),
     [Input('submit-settings-btn', 'n_clicks')],
@@ -718,20 +829,25 @@ def populate_dropdown(source_data):
 
      State('run-mode', 'value'),
      State('energy-mode', 'value'),
+
      State('cutoff', 'value'),
+     State('cutoff-weight', 'value'),
+     State('cutoff-weight-avg', 'value'),
+     State('cutoff-energy', 'value'),
      # ...
      State('temperature-mode', 'value'),
-
-     State('stats-spatial', 'value'),
-     State('stats-angular', 'value'),
-     State('stats-energy', 'value'),
+     State('temperature-default', 'value'),
+     State('temperature-method', 'value'),
+     State('temperature-tolerance', 'value'),
+     State('temperature-range', 'value'),
+     State('temperature-multipole', 'value'),
 
      State('trigger-active', 'on'),
      # ...
-     State('no-reduce', 'on'),
      State('confidence-intervals', 'on'),
      State('ptables', 'on'),
      State('run-cmfd', 'on'),
+     State('no-reduce', 'on'),
      State('survival-biasing', 'on'),
      State('fission-neutrons', 'on'),
      # ...
@@ -739,13 +855,20 @@ def populate_dropdown(source_data):
      State('output-tallies', 'on'),
      State('verbosity', 'value'),
      # ...
+     State('source-stores', 'data'),
+
      State('settings-stores', 'data')]
 )
 def store_settings(click,
-                   total_batches, inactive_batches, particles, gens_per_batch, seed, run_mode, energy_mode, cutoff,
-                   temperature_mode, source_space, source_angle, source_energy, trigger_active, no_reduce,
-                   confidence_intervals, ptables, run_cmfd,
-                   survival_biasing, fission_neutrons, output_summary, output_tallies, verbosity,
+                   total_batches, inactive_batches, particles, gens_per_batch, seed,
+                   run_mode, energy_mode,
+                   cutoff, cutoff_weight, cutoff_weight_avg, cutoff_energy,
+                   temperature_mode, temperature_default, temperature_method, temperature_tolerance, temperature_range,
+                   temperature_multipole, trigger_active,
+                   confidence_intervals, ptables, run_cmfd, no_reduce,
+                   survival_biasing, fission_neutrons,
+                   output_summary, output_tallies, verbosity,
+                   source_data,
                    settings_data):
     settings_data = settings_data or {}
 
@@ -757,11 +880,17 @@ def store_settings(click,
                               'seed': seed,
                               'run-mode': run_mode,
                               'energy-mode': energy_mode,
-                              'cutoff': cutoff,
-                              'temperature-mode': temperature_mode,
-                              'source-space': source_space,
-                              'source-angle': source_angle,
-                              'source-energy': source_energy,
+                              'cutoff-data': {'cutoff': cutoff,
+                                              'cutoff-weight': cutoff_weight,
+                                              'cutoff-weight-avg': cutoff_weight_avg,
+                                              'cutoff-energy': cutoff_energy},
+                              'temperature-data': {'temperature-mode': temperature_mode,
+                                                   'temperature-default': temperature_default,
+                                                   'temperature-method': temperature_method,
+                                                   'temperature-tolerance': temperature_tolerance,
+                                                   'temperature-range': temperature_range,
+                                                   'temperature-multipole': temperature_multipole},
+                              'source-data': source_data,
                               'trigger-active': trigger_active,
                               'no-reduce': no_reduce,
                               'confidence-intervals': confidence_intervals,
@@ -773,5 +902,5 @@ def store_settings(click,
                               'output-tallies': output_tallies,
                               'verbosity': verbosity}
                              )
-
+    print(json.dumps(settings_data, indent=2))
     return settings_data

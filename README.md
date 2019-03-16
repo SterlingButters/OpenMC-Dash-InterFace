@@ -29,29 +29,34 @@ https://devcenter.heroku.com/articles/s3
 
 ### Current release TODO List
 ##### Geometry:
+- SUPPORT WATER HOLES (planes = [0])
 - Set Max Geometrical Boundaries based on Root Geometry in (%)
-    - Getting weird results
+    - Getting weird behavior
 ##### Mesh:
 ##### Cross-Sections:
 ##### Tallies & Settings:
 ##### Other:
 - Clean up with dash multi-output support (esp `Store` components)
+- Document and comment code for collaboration
 
 ### Next Release Features
-- Post Processing
+- Post Processing -> Clean up interface, handle uploaded files, etc
 - Hexagonal Lattices
 - Full Core Model -> use SELECT FEATURE with underlying scatter
-- Cross-Section Library Generation
-    - Energy Filter Specification 
-- Source Specification (https://openmc.readthedocs.io/en/stable/pythonapi/stats.html): 
-    - Layout done -> now callbacks
     
 - Finish Settings: https://openmc.readthedocs.io/en/stable/pythonapi/generated/openmc.Settings.html?highlight=openmc.Settings
-- Dispersed Knowledge/Guidance
+    - Source Specification (https://openmc.readthedocs.io/en/stable/pythonapi/stats.html): 
+        - Layout done -> now callbacks
+    - Others
+    
+- Dispersed Knowledge/Guidance, research tooltips
+
+### Future Releases
+- Burnup and Depletion
 
 #### Unnecessary Beautification Features
 - Expand Lists in Material Table
-- Create Cross-Section Plots
+- Add Density & Melting Point to Periodic Table
 - 3D Rendering of Geometry
 - Graph Cell(s)/Assembly(ies) from Memory
 - Add Snackbars to Alert User that configs have been accepted into data (easy with multi-output)
@@ -62,5 +67,19 @@ https://devcenter.heroku.com/articles/s3
 
 # Contributing
 See TODO Lists
+
+*Basic concept*:
+The original approach to this interface was to build the model a piece at a time in a corresponding callback.
+While this may or may not sound intuitive to you, it is the wrong approach because handling objects is difficult
+in Dash due to storage mechanisms and requirements i.e. a Redis server would allegedly handle object storage but 
+I had no such success. Instead, the option we are left with is, in fact, much more modular in that the interface 
+is nearly completely separate from the model building which happens all in one callback. This single callback 
+references ALL the data that has been put into storage to create the model. As far as OpenMC goes, this is nice 
+because their is no need to much of the functionality that OpenMC provides e.g. removing nuclides or changing 
+geometry, etc. Instead, all of the data is tailored in the interface prior to model creation. You will notice 
+that many of the storage callbacks *could* be merged but it was much easier to limit the amount of information in 
+each component for debugging purposes. 
+
+Happy to take on collaborators.
 
 Email: sterlingbutters@gmail.com

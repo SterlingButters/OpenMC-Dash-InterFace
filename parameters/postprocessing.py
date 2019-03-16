@@ -149,7 +149,9 @@ def statepoint_evaluation(desired_score):
         # Initialize MGXS Library with OpenMC statepoint data
         # xs_lib.load_from_statepoint(sp)
 
-        goal_array = goal.get_values().reshape(sp.meshes[1]._dimension)
+        print(sp.meshes)
+
+        goal_array = goal.get_values().reshape(sp.meshes[2]._dimension)
 
         maxes = []
         for m in range(len(goal_array)):

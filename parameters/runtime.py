@@ -426,10 +426,10 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             for c in range(len(main_cylinders)):
                 if c == 0:
                     MAIN_CELLS[c].region = -main_cylinders[c]
-                elif c == len(main_cylinders) - 1:
+                if c == len(main_cylinders) - 1:
                     MAIN_CELLS[c].region = +main_cylinders[c]
-                else:
-                    MAIN_CELLS[c].region = +main_cylinders[c] & -main_cylinders[c + 1]
+                if c > 0:
+                    MAIN_CELLS[c].region = +main_cylinders[c-1] & -main_cylinders[c]
 
             main_universe = openmc.Universe(name='Main Pin Cell')
             main_universe.add_cells(MAIN_CELLS)
@@ -463,10 +463,10 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
                 for c in range(len(injection_cylinders)):
                     if c == 0:
                         INJECTION_CELLS[c].region = -injection_cylinders[c]
-                    elif c == len(injection_cylinders) - 1:
+                    if c == len(injection_cylinders) - 1:
                         INJECTION_CELLS[c].region = +injection_cylinders[
                             c] & +min_x & -max_x & +min_y & -max_y & +min_z & -max_z
-                    else:
+                    if c > 0:
                         INJECTION_CELLS[c].region = +injection_cylinders[c] & -injection_cylinders[c + 1]
 
                 injected_universe = openmc.Universe(name='{} Cell'.format(injected_cell))
@@ -579,24 +579,227 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         model.settings.seed = settings_data['seed']
 
         # TODO: Parse sources from settings_data
-        space_sources = []
+        # loop over sources
+        # spatial source req'd -> logic
+        # if angular -> logic
+        # if energy -> logic
+        openmc_sources = []
+        extracted_sources = settings_data['source-data']
+        for key in extracted_sources.keys():
+            source = extracted_sources[key]
 
-        model.settings.source = openmc.Source(
-            space=openmc.stats.Box(
-                [-width / 2, -depth / 2, -height / 2], [width / 2, depth / 2, height / 2],
-                only_fissionable=True
-            ),
-            # angle=,
-            # energy=,
-            strength=1.0
-        )
+            # Handle Spatial Distibutions
+            space = None  # Cannot end up being None tho
+            if source['stats-spatial'] == 'box':
 
+                if source['whole-geometry'] is None or True:  # TODO: Check why null
+                    space = openmc.stats.Box([-width / 2, -depth / 2, -height / 2],
+                                             [width / 2, depth / 2, height / 2],
+                                             only_fissionable=True)
+                else:
+                    space = openmc.stats.Box(
+                        [-source['box-lower-x'] / 2, -source['box-lower-y'] / 2, -source['box-lower-z'] / 2],
+                        [source['box-upper-x'] / 2, source['box-upper-y'] / 2, source['box-upper-z'] / 2],
+                        only_fissionable=True)
+
+            elif source['stats-spatial'] == 'point':
+
+                space = openmc.stats.Point(xyz=(source['point-x'], source['point-y'], source['point-z']))
+
+            elif source['stats-spatial'] == 'cartesian-independent':
+                pass  # TODO
+
+            # Handle Angular Distributions
+            angle = None
+            if source['stats-angular'] == 'polar-azimuthal':
+                u = source['reference-u']
+                v = source['reference-v']
+                w = source['reference-w']
+
+                ######### Handle Mu TODO: Shorten with function for Mu AND Phi (could also do energy)
+                mu = None
+                if source['mu']:
+                    mu_probability = source['mu']['stats-probability']
+
+                    if mu_probability == 'discrete':
+                        mu_discrete_values = [float(value) for value in
+                                              source['mu']['angle-discrete-values'].split(',')]
+                        mu_discrete_values.sort()
+                        mu_discrete_probs = [float(prob) for prob in source['mu']['angle-discrete-probs'].split(',')]
+
+                        mu = openmc.stats.Discrete(x=mu_discrete_values, p=mu_discrete_probs)
+
+                    elif mu_probability == 'uniform':
+                        mu_uniform_a = source['mu']['angle-uniform-a']
+                        mu_uniform_b = source['mu']['angle-uniform-b']
+
+                        mu = openmc.stats.Uniform(a=mu_uniform_a, b=mu_uniform_b)
+
+                    elif mu_probability == 'maxwell':
+                        mu_maxwell_t = source['mu']['angle-maxwell-t']
+
+                        mu = openmc.stats.Maxwell(theta=mu_maxwell_t)
+
+                    elif mu_probability == 'watt':
+                        mu_watt_a = source['mu']['angle-watt-a']
+                        mu_watt_b = source['mu']['angle-watt-a']
+
+                        mu = openmc.stats.Watt(a=mu_watt_a, b=mu_watt_b)
+
+                    elif mu_probability == 'tabular':
+                        mu_tabular_values = [float(value) for value in source['mu']['angle-tabular-values'].split(',')]
+                        mu_tabular_values.sort()
+                        mu_tabular_probs = [float(prob) for prob in source['mu']['angle-tabular-probs'].split(',')]
+                        mu_tabular_interp = source['mu']['angle-interpolation']
+
+                        mu = openmc.stats.Tabular(x=mu_tabular_values, p=mu_tabular_probs,
+                                                  interpolation=mu_tabular_interp)
+
+                    elif mu_probability == 'legendre':
+                        mu_legendre_coeffs = [float(value) for value in
+                                              source['mu']['angle-legendre-coeffs'].split(',')]
+
+                        mu = openmc.stats.Legendre(coefficients=mu_legendre_coeffs)
+
+                    elif mu_probability == 'mixture':
+                        pass  # TODO
+
+                phi = None
+                if source['phi']:
+                    phi_probability = source['phi']['stats-probability']
+
+                    if phi_probability == 'discrete':
+                        phi_discrete_values = [float(value) for value in
+                                               source['phi']['angle-discrete-values'].split(',')]
+                        phi_discrete_values.sort()
+                        phi_discrete_probs = [float(prob) for prob in source['phi']['angle-discrete-probs'].split(',')]
+
+                        phi = openmc.stats.Discrete(x=phi_discrete_values, p=phi_discrete_probs)
+
+                    elif phi_probability == 'uniform':
+                        phi_uniform_a = source['phi']['angle-uniform-a']
+                        phi_uniform_b = source['phi']['angle-uniform-b']
+
+                        phi = openmc.stats.Uniform(a=phi_uniform_a, b=phi_uniform_b)
+
+                    elif phi_probability == 'maxwell':
+                        phi_maxwell_t = source['phi']['angle-maxwell-t']
+
+                        phi = openmc.stats.Maxwell(theta=phi_maxwell_t)
+
+                    elif phi_probability == 'watt':
+                        phi_watt_a = source['phi']['angle-watt-a']
+                        phi_watt_b = source['phi']['angle-watt-a']
+
+                        phi = openmc.stats.Watt(a=phi_watt_a, b=phi_watt_b)
+
+                    elif phi_probability == 'tabular':
+                        phi_tabular_values = [float(value) for value in
+                                              source['phi']['angle-tabular-values'].split(',')]
+                        phi_tabular_values.sort()
+                        phi_tabular_probs = [float(prob) for prob in source['phi']['angle-tabular-probs'].split(',')]
+                        phi_tabular_interp = source['phi']['angle-interpolation']
+
+                        phi = openmc.stats.Tabular(x=phi_tabular_values, p=phi_tabular_probs,
+                                                   interpolation=phi_tabular_interp)
+
+                    elif phi_probability == 'legendre':
+                        phi_legendre_coeffs = [float(value) for value in
+                                               source['phi']['angle-legendre-coeffs'].split(',')]
+
+                        phi = openmc.stats.Legendre(coefficients=phi_legendre_coeffs)
+
+                    elif phi_probability == 'mixture':
+                        pass  # TODO
+
+                angle = openmc.stats.PolarAzimuthal(mu=mu, phi=phi, reference_uvw=[u, v, w])
+
+            elif source['stats-angular'] == 'mono-directional':
+                u = source['reference-u']
+                v = source['reference-v']
+                w = source['reference-w']
+
+                angle = openmc.stats.Monodirectional(reference_uvw=[u, v, w])
+
+            elif source['stats-angular'] == 'isotropic':
+
+                angle = openmc.stats.Isotropic()
+
+            # Handle Energy Distributions
+            energy = None
+            try:
+                energy_probability = source['stats-energy']
+
+                if energy_probability == 'discrete':
+                    energy_discrete_values = [float(value) for value in source['energy-discrete-values'].split(',')]
+                    energy_discrete_values.sort()
+                    energy_discrete_probs = [float(prob) for prob in source['energy-discrete-probs'].split(',')]
+
+                    energy = openmc.stats.Discrete(x=energy_discrete_values, p=energy_discrete_probs)
+
+                elif energy_probability == 'uniform':
+                    energy_uniform_a = source['energy-uniform-a']
+                    energy_uniform_b = source['energy-uniform-b']
+
+                    energy = openmc.stats.Uniform(a=energy_uniform_a, b=energy_uniform_b)
+
+                elif energy_probability == 'maxwell':
+                    energy_maxwell_t = source['energy-maxwell-t']
+
+                    energy = openmc.stats.Maxwell(theta=energy_maxwell_t)
+
+                elif energy_probability == 'watt':
+                    energy_watt_a = source['energy-watt-a']
+                    energy_watt_b = source['energy-watt-a']
+
+                    energy = openmc.stats.Watt(a=energy_watt_a, b=energy_watt_b)
+
+                elif energy_probability == 'tabular':
+                    energy_tabular_values = [float(value) for value in source['energy-tabular-values'].split(',')]
+                    energy_tabular_values.sort()
+                    energy_tabular_probs = [float(prob) for prob in source['energy-tabular-probs'].split(',')]
+                    energy_tabular_interp = source['energy-interpolation']
+
+                    energy = openmc.stats.Tabular(x=energy_tabular_values, p=energy_tabular_probs,
+                                                  interpolation=energy_tabular_interp)
+
+                elif energy_probability == 'legendre':
+                    energy_legendre_coeffs = [float(value) for value in source['energy-legendre-coeffs'].split(',')]
+
+                    energy = openmc.stats.Legendre(coefficients=energy_legendre_coeffs)
+
+                elif energy_probability == 'mixture':
+                    pass  # TODO
+
+            except:
+                print('No Energy Distribution')
+
+            strength = source['source-strength']
+
+            openmc_sources.append(
+                openmc.Source(
+                    space=space,
+                    angle=angle,
+                    energy=energy,
+                    strength=strength
+                ))
+
+        model.settings.source = openmc_sources
         model.settings.energy_mode = settings_data['energy-mode']
         model.settings.run_mode = settings_data['run-mode']
 
         # model.settings.cutoff = settings_data['']
         # model.settings.temperature = settings_data['']
+
         # model.settings.trigger_active = settings_data['']
+        # keff_trigger = dict
+        # trigger_batch_interval = int
+        # trigger_max_batches = int
+
+        # model.settings.entropy_mesh = openmc.mesh
+        # max_order = None or int
+        # multipole_library = 'path'
+
         model.settings.no_reduce = settings_data['no-reduce']
         model.settings.confidence_intervals = settings_data['confidence-intervals']
         model.settings.ptables = settings_data['ptables']
@@ -605,6 +808,15 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         model.settings.fission_neutrons = settings_data['fission-neutrons']
         model.settings.output = {'summary': settings_data['output-summary'], 'tallies': settings_data['output-tallies']}
         model.settings.verbosity = settings_data['verbosity']
+
+        # ufs_mesh = openmc.Mesh
+        # volume_calculations = iterable of VolumeCalculation
+        # resonance_scattering = dict
+
+        # tabular_legendre (dict) – Determines if a multi-group scattering moment kernel expanded via Legendre polynomials
+        # is to be converted to a tabular distribution or not. Accepted keys are ‘enable’ and ‘num_points’. The value for
+        # ‘enable’ is a bool stating whether the conversion to tabular is performed; the value for ‘num_points’ sets the
+        # number of points to use in the tabular distribution, should ‘enable’ be True.
 
         # model.settings.state_point = dict
         # model.settings.source_point = dict
@@ -656,8 +868,8 @@ def run_model(click):
             openmc.run()
 
         # Cleanup files after run
-        for file in xml_files_dst:
-            os.remove(file)
+        # for file in xml_files_dst:
+        #     os.remove(file)
 
         return dcc.Textarea(id='console-output', value=output.getvalue(),
                             placeholder='Console Output will appear here...',

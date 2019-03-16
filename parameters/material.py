@@ -1,4 +1,5 @@
 import json
+import os
 import dash
 import dash_core_components as dcc
 import dash_daq as daq
@@ -9,6 +10,7 @@ import plotly.figure_factory as ff
 import plotly.graph_objs as go
 from dash.dependencies import Output, State, Input
 from dash.exceptions import PreventUpdate
+import openmc
 
 from app import app
 
@@ -290,6 +292,7 @@ layout = html.Div([
                             display='table',
                         )),
                 ]),
+                html.Div(id='xsection-graph')
             ],
                 style=dict(
                     display='table-cell',
@@ -344,6 +347,53 @@ def choose_element(clickData):
 
 
 #######################################################################################################################
+@app.callback(
+    Output('xsection-graph', 'children'),
+    [Input('periodic-table', 'clickData'),
+     Input('atomic-mass', 'value')]
+)
+def graph_xsection(clickData, atomic_mass):
+    chosen_element = clickData['points'][0]['text'].split(':')[0] if clickData else None
+    element_mass = float(clickData['points'][0]['text'].split(':')[2]) if clickData else None
+
+    if atomic_mass is None:
+        atomic_mass = int(element_mass) if element_mass else None
+
+    script_dir = os.path.dirname(__file__)
+    xsection_path = os.path.join(script_dir, '../nndc_hdf5/cross_sections.xml')
+    library = openmc.data.DataLibrary.from_xml(xsection_path)
+
+    try:
+        filename = library.get_by_material('{}{}'.format(chosen_element, atomic_mass))['path']
+        u238_pointwise = openmc.data.IncidentNeutron.from_hdf5(filename)
+
+        data = []
+        # print(u238_pointwise.temperatures)
+        for r in u238_pointwise.reactions.values():
+            s = str(r)
+            name = '({})'.format(s[s.find("(") + 1:s.find(")")])
+            data.append(go.Scatter(x=r.xs['294K'].x,  # Can also use function data
+                                   y=r.xs['294K'].y,
+                                   name=name,
+                                   text='Q-value: {}'.format(r.q_value)))
+
+    except:
+        data = []
+
+    layout = go.Layout(
+        xaxis=dict(
+            type='log',
+            autorange=True
+        ),
+        yaxis=dict(
+            type='log',
+            autorange=True
+        )
+    )
+
+    figure = go.Figure(data=data, layout=layout)
+
+    return dcc.Graph(figure=figure)
 
 
 # Submit material, element/isotope into memory
