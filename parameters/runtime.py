@@ -350,7 +350,6 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
 
         #######################################
         # Geometry
-        # TODO: See https://github.com/openmc-dev/openmc/issues/1194
 
         # Determine whether root geometry is a cell or an assembly
         root_geometry = geometry_data['root-geometry']
@@ -360,7 +359,6 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             pitch_y = cell_data[root_geometry]['y-pitch']
             height_z = cell_data[root_geometry]['height']
 
-            # TODO: Handle radii=[0]
             cylinders = []
             cell_radii = cell_data[root_geometry]['radii']
             for r in range(len(cell_radii)):
@@ -401,7 +399,6 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             pitch_y = cell_data[assembly_data[root_geometry]['main-cell']]['y-pitch']
             height_z = cell_data[assembly_data[root_geometry]['main-cell']]['height']
 
-            # TODO: Handle radii=[0]
             main_cylinders = []
             main_cell_radii = cell_data[assembly_data[root_geometry]['main-cell']]['radii']
 
@@ -517,8 +514,8 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         # Mesh
         spatial_mesh = openmc.Mesh()
         spatial_mesh.type = 'regular'
+        energy_bins = None
 
-        # energy_mesh = openmc.Mesh()
         for filter in score_data['filters']:
             if filter['type'] == 'spatial':
                 res_x = filter['x-resolution']
@@ -531,15 +528,18 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
                 spatial_mesh.lower_left = [-width / 2, -depth / 2, -height / 2]
                 spatial_mesh.width = [width / res_x, depth / res_y, height / res_z]
 
-            # if mesh_data[filter_name]['type'] == 'energy':
-            # TODO: Parse energy bins from mesh_data
-
-        # Create a mesh filter
-        mesh_filter = openmc.MeshFilter(spatial_mesh)
+            if filter['type'] == 'energy':
+                energy_start = filter['energy-start']
+                energy_end = filter['energy-end']
+                if filter['energy-spacing'] == 'log':
+                    energy_bins = np.logspace(np.log10(energy_start), np.log10(energy_end),
+                                                filter['energy-groups'] + 1)
+                elif filter['energy-spacing'] == 'lin':
+                    energy_bins = np.linspace(energy_start, energy_end, filter['energy-groups'] + 1)
 
         #######################################
         # Cross-sections
-
+        mgxs_lib = None
         if xsection_data:
             energy_groups = openmc.mgxs.EnergyGroups()
             energy_start = xsection_data['energy-start']
@@ -572,19 +572,24 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         # Tallies/Scores
 
         model.tallies = openmc.Tallies()
-        # mgxs_lib.add_to_tallies_file(model.tallies, merge=True)
 
+        # Create a mesh filter
+        mesh_filter = openmc.MeshFilter(spatial_mesh)
         mesh_tally = openmc.Tally(name='Mesh')
         mesh_tally.filters = [mesh_filter]
         mesh_tally.scores = score_data['scores']
-
-        # energy_tally = openmc.Tally(name='Energy')
-        # energy_tally.filters = [energy_filter]
-        # energy_tally.scores = score_data['scores']
-
-        # Add tallies to the tallies file
         model.tallies.append(mesh_tally)
-        # model.tallies.append(energy_tally)
+
+        # Create an energy filter
+        if energy_bins:
+            energy_filter = openmc.EnergyFilter(energy_bins)
+            energy_tally = openmc.Tally(name='Energy')
+            energy_tally.filters = [energy_filter]
+            energy_tally.scores = score_data['scores']
+            model.tallies.append(energy_tally)
+
+        if mgxs_lib:
+            mgxs_lib.add_to_tallies_file(model.tallies, merge=True)
 
         #######################################
         # Settings
@@ -594,11 +599,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         model.settings.generations_per_batch = settings_data['gens-per-batch']
         model.settings.seed = settings_data['seed']
 
-        # TODO: Parse sources from settings_data
-        # loop over sources
-        # spatial source req'd -> logic
-        # if angular -> logic
-        # if energy -> logic
+        # TODO: Test out Source configs
         openmc_sources = []
         extracted_sources = settings_data['source-data']
         for key in extracted_sources.keys():
@@ -804,17 +805,60 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         model.settings.energy_mode = settings_data['energy-mode']
         model.settings.run_mode = settings_data['run-mode']
 
-        # model.settings.cutoff = settings_data['']
-        # model.settings.temperature = settings_data['']
+        try:
+            cutoff_dict = {}
+            if 'weight' in settings_data['cutoff-data']['cutoff']:
+                cutoff_dict.update({'weight': settings_data['cutoff-data']['cutoff-weight']})
+            if 'weight_avg' in settings_data['cutoff-data']['cutoff']:
+                cutoff_dict.update({'weight_avg': settings_data['cutoff-data']['cutoff-weight-avg']})
+            if 'energy' in settings_data['cutoff-data']['cutoff']:
+                cutoff_dict.update({'energy': settings_data['cutoff-data']['cutoff-energy']})
+            model.settings.cutoff = cutoff_dict
+        except:
+            print('No Cutoff data')
+
+        temperature_dict = {}
+        try:
+            if 'default' in settings_data['temperature-data']['temperature-mode']:
+                temperature_dict.update({'default': settings_data['temperature-data']['temperature-default']})
+            if 'method' in settings_data['temperature-data']['temperature-mode']:
+                temperature_dict.update({'method': settings_data['temperature-data']['temperature-method']})
+                if settings_data['temperature-data']['temperature-method'] == 'nearest':
+                    temperature_dict.update({'tolerance': settings_data['temperature-data']['temperature-tolerance']})
+            if 'range' in settings_data['temperature-data']['temperature-mode']:
+                temperature_dict.update({'range': settings_data['temperature-data']['temperature-range']})
+            if 'multipole' in settings_data['temperature-data']['temperature-mode']:
+                temperature_dict.update({'multipole': settings_data['temperature-data']['temperature-multipole']})
+            model.settings.temperature = temperature_dict
+        except:
+            print('No temperature mode data')
 
         # model.settings.trigger_active = settings_data['']
-        # keff_trigger = dict
-        # trigger_batch_interval = int
-        # trigger_max_batches = int
+        # model.settings.keff_trigger = dict
 
-        # model.settings.entropy_mesh = openmc.mesh
-        # max_order = None or int
-        # multipole_library = 'path'
+        try:
+            model.settings.trigger_batch_interval = int(settings_data['trigger-batch-interval'])
+            model.settings.trigger_max_batches = int(settings_data['trigger-max-batches'])
+        except:
+            pass
+
+        # Mesh to be used to calculate Shannon entropy. If the mesh dimensions are not specified. OpenMC assigns a
+        # mesh such that 20 source sites per mesh cell are to be expected on average.
+        # model.settings.entropy_mesh = openmc.CMFDMesh
+
+        # Mesh to be used for redistributing source sites via the uniform fission site (UFS) method.
+        # model.settings.ufs_mesh = openmc.Mesh
+
+        # model.settings.volume_calculations = iterable of VolumeCalculation
+
+        # model.settings.max_order = None or int
+
+        # model.settings.resonance_scattering = dict
+        # model.settings.multipole_library = 'path'
+        # model.settings.tabular_legendre (dict) – Determines if a multi-group scattering moment kernel expanded via Legendre polynomials
+        # is to be converted to a tabular distribution or not. Accepted keys are ‘enable’ and ‘num_points’. The value for
+        # ‘enable’ is a bool stating whether the conversion to tabular is performed; the value for ‘num_points’ sets the
+        # number of points to use in the tabular distribution, should ‘enable’ be True.
 
         model.settings.no_reduce = settings_data['no-reduce']
         model.settings.confidence_intervals = settings_data['confidence-intervals']
@@ -824,15 +868,6 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
         model.settings.fission_neutrons = settings_data['fission-neutrons']
         model.settings.output = {'summary': settings_data['output-summary'], 'tallies': settings_data['output-tallies']}
         model.settings.verbosity = settings_data['verbosity']
-
-        # ufs_mesh = openmc.Mesh
-        # volume_calculations = iterable of VolumeCalculation
-        # resonance_scattering = dict
-
-        # tabular_legendre (dict) – Determines if a multi-group scattering moment kernel expanded via Legendre polynomials
-        # is to be converted to a tabular distribution or not. Accepted keys are ‘enable’ and ‘num_points’. The value for
-        # ‘enable’ is a bool stating whether the conversion to tabular is performed; the value for ‘num_points’ sets the
-        # number of points to use in the tabular distribution, should ‘enable’ be True.
 
         # model.settings.state_point = dict
         # model.settings.source_point = dict

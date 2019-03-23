@@ -31,21 +31,24 @@ https://devcenter.heroku.com/articles/s3
 ##### Geometry:
 - Set Max Geometrical Boundaries based on Root Geometry in (%)
     - Getting weird behavior
+- Make marker sizes proportional to dims of geometry (would need rectangle markers -> false: more cells doesnt change dims; would need rectangles if )
 ##### Mesh:
 ##### Cross-Sections:
 ##### Tallies & Settings:
+- Look into rest of filters: https://openmc.readthedocs.io/en/stable/pythonapi/base.html#coarse-mesh-finite-difference-acceleration
 ##### Other:
 - Clean up with dash multi-output support (esp `Store` components)
 
 ### Next Release Features
 - Post Processing -> Clean up interface, handle uploaded files, etc
 - Hexagonal Lattices
-- Full Core Model -> use SELECT FEATURE with underlying scatter
+- Full Core Model 
     
 - Finish Settings: https://openmc.readthedocs.io/en/stable/pythonapi/generated/openmc.Settings.html?highlight=openmc.Settings
     - Source Specification (https://openmc.readthedocs.io/en/stable/pythonapi/stats.html): 
-        - Layout done -> now callbacks
-    - Others e.g. temperature mode and cutoff
+        - Remaining: Cartesian Independent
+    - 
+    
     
 - Dispersed Knowledge/Guidance, research tooltips
 
@@ -58,6 +61,7 @@ https://devcenter.heroku.com/articles/s3
 - 3D Rendering of Geometry
 - Graph Cell(s)/Assembly(ies) from Memory
 - Add Snackbars to Alert User that configs have been accepted into data (easy with multi-output)
+    - This behaves oddly -> find alternative
 
 #### Questionable Features
 - Removal of items from memory

@@ -511,7 +511,7 @@ def submit_isotope(mat_click, iso_click, material_name, material_density, materi
 
     trigger = dash.callback_context.triggered[0]
     if 'submit-material-button' in trigger['prop_id']:
-        if None or '' in [material_name, material_density]:
+        if None in [material_name, material_density] or '' in [material_name, material_density]:
             print('A Material Parameter remains Unfilled')
         else:
             material_data.update({'{}'.format(material_name):
