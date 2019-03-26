@@ -609,7 +609,7 @@ def build_model(click, material_data, cell_data, assembly_data, geometry_data, s
             space = None  # Cannot end up being None tho
             if source['stats-spatial'] == 'box':
 
-                if source['whole-geometry'] is None or True:  # TODO: Check why null
+                if source['whole-geometry'] is None or True:
                     space = openmc.stats.Box([-width / 2, -depth / 2, -height / 2],
                                              [width / 2, depth / 2, height / 2],
                                              only_fissionable=True)

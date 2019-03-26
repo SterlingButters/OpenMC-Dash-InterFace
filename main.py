@@ -27,11 +27,9 @@ app.layout = html.Div([
     # Geometry
     dcc.Store(id='color-stores', storage_type='session'),
     dcc.Store(id='cell-stores', storage_type='session'),
-    # dcc.Store(id='injection-stores', storage_type='session'),
     dcc.Store(id='temp-assembly-stores', storage_type='session'),
     dcc.Store(id='assembly-stores', storage_type='session'),
-    dcc.Store(id='assembly-injection-stores', storage_type='session'),
-    # dcc.Store(id='core-stores', storage_type='session'),
+    dcc.Store(id='core-stores', storage_type='session'),
     dcc.Store(id='geometry-stores', storage_type='session'),
     # Mesh
     dcc.Store(id='mesh-stores', storage_type='session'),

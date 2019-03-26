@@ -1,4 +1,3 @@
-import dash
 import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
@@ -207,10 +206,13 @@ layout = html.Div([
     html.P("Number of assemblies in y dimension"),
     dcc.Input(id='core-y-dim', placeholder='Enter Assemblies in y-dimension',
               type='number', value=20),
+    html.Br(),
     dcc.Dropdown('assembly-dropdown'),
+    html.Br(),
     html.Button('Inject Assembly into Core', id='inject-assembly-btn'),
     html.Div(id='display-assembly-indices'),
     dcc.Graph(id='core-graph'),
+    html.Div(id='debug'),
 
     ################################################################################
     html.H3('Root Geometry'),
@@ -574,7 +576,6 @@ def store_cell(clicks, name, planes, x_pitch, y_pitch, height, materials, colors
                                               'materials': materials,
                                               'colors': colors}})
 
-        print(cell_data)
         return cell_data
 
 
@@ -621,16 +622,13 @@ def populate_dropdown(timestamp, main_cell, data):
     [Input('assembly-graph', 'selectedData'),
      Input('submit-selected-btn', 'n_clicks')]
 )
-def print_selected_cells(selectedData, clicks):
-    xs = None
-    ys = None
-
+def display_selected_cells(selectedData, clicks):
     if selectedData:
-        print(selectedData)
         xs = [point['x'] for point in selectedData['points']]
         ys = [point['y'] for point in selectedData['points']]
+        selected_cell = list(zip(xs, ys))
 
-    return html.P('{}, {}'.format(xs, ys))
+        return html.P('{}'.format(str(selected_cell)))
 
 
 @app.callback(
@@ -657,7 +655,6 @@ def configure_stores(clicks, main_cell, assembly_num_x, assembly_num_y, selected
         data['assembly-metrics']['assembly-pitch-y'] = cell_data[main_cell]['y-pitch']
 
     if selected_cell:
-        # TODO: Check this
         selection_locs = np.column_stack(([point['x'] for point in selectedData['points']],
                                           [point['y'] for point in selectedData['points']]))
 
@@ -823,127 +820,193 @@ def populate_dropdown(assembly_data):
 
 @app.callback(
     Output('display-assembly-indices', 'children'),
-    [Input('assembly-injection-stores', 'modified_timestamp')],
-    [State('assembly-injection-stores', 'data')]
+    [Input('core-graph', 'selectedData')],
 )
-def show_selection_locations(timestamp, data):
-    if timestamp is None:
-        raise PreventUpdate
-    if data:
-        return html.P('{}'.format(str(data['selected-assemblies'])))
-
-
-@app.callback(
-    Output('assembly-injection-stores', 'data'),
-    [Input('core-graph', 'selectedData'),
-     Input('inject-assembly-btn', 'n_clicks'),
-     Input('core-x-dim', 'value'),
-     Input('core-y-dim', 'value')],
-    [State('assembly-dropdown', 'value'),
-     State('assembly-injection-stores', 'data'),
-     State('assembly-stores', 'data')]
-)
-def store_selected_assemblies(selectedData, clicks, core_x_dim, core_y_dim, assembly_name, data, assembly_data):
-    if not dash.callback_context.triggered:
-        raise PreventUpdate
-
-    data = data or {'selected-assemblies': []}
-    selected_assemblies = data['selected-assemblies']
-
-    trigger = dash.callback_context.triggered[0]
-    print(trigger)
-
-    if 'selectedData' in trigger['prop_id']:
-        print(selectedData)
+def show_selection_locations(selectedData):
+    if selectedData:
         xs = [point['x'] for point in selectedData['points']]
         ys = [point['y'] for point in selectedData['points']]
-        for i in range(len(xs)):
-            if [xs[i], ys[i]] not in selected_assemblies:
-                selected_assemblies.append([xs[i], ys[i]])
-            else:
-                selected_assemblies.remove([xs[i], ys[i]])
 
-    if 'btn' in trigger['prop_id']:
+        new_xs = []
+        new_ys = []
+        for i in range(len(xs)):
+            if type(xs[i]) is int and type(ys[i]) is int:
+                new_xs.append(xs[i])
+                new_ys.append(ys[i])
+
+        selected_assemblies = list(zip(new_xs, new_ys))
+
+        return html.P('{}'.format(str(selected_assemblies)))
+
+
+# TODO: Selectable Shapes or absolute marker size
+# TODO: Fix Marker Sizes
+@app.callback(
+    [Output('core-graph', 'figure'),
+     Output('core-stores', 'data')],
+    [Input('inject-assembly-btn', 'n_clicks'),
+     Input('core-x-dim', 'value'),
+     Input('core-y-dim', 'value')],
+    [State('core-graph', 'selectedData'),
+     State('cell-stores', 'data'),
+     State('assembly-dropdown', 'value'),
+     State('assembly-stores', 'data'),
+     State('core-stores', 'data')]
+)
+def change_selected_assemblies(clicks, core_x_dim, core_y_dim, selectedData, cell_data, assembly_name, assembly_data,
+                               core_data):
+    core_data = core_data or {'assembly-assignments': {}}
+    graph_data = []
+
+    if clicks and selectedData:
+        xs = [point['x'] for point in selectedData['points']]
+        ys = [point['y'] for point in selectedData['points']]
+
+        selected_locations = []
+        for i in range(len(xs)):
+            if type(xs[i]) is int and type(ys[i]) is int \
+                    and (xs[i], ys[i]) not in selected_locations:
+                selected_locations.append((xs[i], ys[i]))
+
+        core_data['assembly-assignments'].update({'{}'.format(assembly_name):
+                                                      {'indices': selected_locations}
+                                                  })
+
         assembly_num_x = assembly_data[assembly_name]['assembly-metrics']['assembly-num-x']
         assembly_num_y = assembly_data[assembly_name]['assembly-metrics']['assembly-num-y']
         pitch_x = assembly_data[assembly_name]['assembly-metrics']['assembly-pitch-x']
         pitch_y = assembly_data[assembly_name]['assembly-metrics']['assembly-pitch-y']
 
-        assembly_width = assembly_num_x*pitch_x
-        assembly_height = assembly_num_y*pitch_y
+        assembly_width = assembly_num_x * pitch_x
+        assembly_height = assembly_num_y * pitch_y
+        spacing_x = pitch_x / assembly_width * .85  # Factor to squeeze into assembly marker
+        spacing_y = pitch_y / assembly_height * .85  # Factor to squeeze into assembly marker
 
-        print(selected_assemblies)
-        for index in selected_assemblies:
+        span_x = np.linspace(-assembly_num_x / 2 * spacing_x, assembly_num_x / 2 * spacing_x, assembly_num_x)
+        span_y = np.linspace(-assembly_num_y / 2 * spacing_y, assembly_num_y / 2 * spacing_y, assembly_num_y)
+        pin_xs, pin_ys = np.meshgrid(span_x, span_y)
+        pin_xs = pin_xs.flatten()
+        pin_ys = pin_ys.flatten()
+
+        for index in selected_locations:
             i = index[0]
             j = index[1]
-            print(i, j)
-            print(i*assembly_width, j*assembly_height)
+            test_x = i + pin_xs
+            test_y = j + pin_ys
 
-        selected_assemblies = []
+            cell_map = list(zip(test_x, test_y))
 
-    print(assembly_data[assembly_name])
-    return {'selected-assemblies': selected_assemblies}
+            for cell_name in assembly_data[assembly_name]['injected-cells'].keys():
+                indices = np.array(assembly_data[assembly_name]['injected-cells'][cell_name]['indices'])
 
+                # Delete Injection indices from background
+                for i in range(len(indices)):
+                    index = (indices[i][0], indices[i][1])
+                    if index in cell_map:
+                        cell_map.remove(index)
 
-@app.callback(
-    Output('core-graph', 'figure'),
-    [Input('core-x-dim', 'value'),
-     Input('core-y-dim', 'value')],
-    # [State('core-stores', 'data')]
-)
-def create_core(core_num_x, core_num_y):  # core_data):
-    assembly_region = np.ones((core_num_x, core_num_y))
+                colors = cell_data[cell_name]['colors'][::-1]
+                radii = cell_data[cell_name]['radii'][::-1]
+                for i in range(len(colors)):
 
-    # Add centers for selection tool
-    x_centers, y_centers = np.meshgrid(np.arange(core_num_x),
-                                       np.arange(core_num_y))
+                    color = colors[i]
+                    if i == 0:
+                        symbol = 'square'
+                        size = 3
+                        opacity = .5
+                    else:
+                        radius = radii[i - 1]
+                        symbol = 'circle'
+                        size = 2  # pitch y?
+                        opacity = 1
 
-    centers = go.Scatter(x=x_centers.flatten(),
+                    graph_data.append(go.Scatter(x=indices[:, 0],
+                                                 y=indices[:, 1],
+                                                 hoverinfo='none',
+                                                 mode='markers',
+                                                 showlegend=False,
+                                                 marker=dict(symbol=symbol,
+                                                             size=size,
+                                                             color=color),
+                                                 opacity=opacity))
+
+            main_colors = cell_data[assembly_data[assembly_name]['main-cell']]['colors'][::-1]
+            main_radii = cell_data[assembly_data[assembly_name]['main-cell']]['radii'][::-1]
+
+            for i in range(len(main_colors)):
+                color = main_colors[i]
+                if i == 0:
+                    symbol = 'square'
+                    size = 4
+                    opacity = .5
+                else:
+                    radius = main_radii[i - 1]
+                    symbol = 'circle'
+                    size = 2  # pitch y?
+                    opacity = 1
+
+                graph_data.append(go.Scatter(x=np.array(cell_map)[:, 0],
+                                             y=np.array(cell_map)[:, 1],
+                                             hoverinfo='none',
+                                             mode='markers',
+                                             showlegend=False,
+                                             marker=dict(symbol=symbol,
+                                                         size=size,
+                                                         color=color),
+                                             opacity=opacity))
+
+    x_centers, y_centers = np.meshgrid(np.arange(core_x_dim),
+                                       np.arange(core_y_dim))
+
+    squares = go.Scatter(x=x_centers.flatten(),
                          y=y_centers.flatten(),
                          mode='markers',
+                         showlegend=False,
                          marker=dict(symbol='square',
                                      size=55,
-                                     color=0),
+                                     color='white',
+                                     line=dict(
+                                         color='black',
+                                         width=1
+                                     )),
                          hoverinfo='none',
-                         opacity=.2
+                         opacity=.5
                          )
 
-    heatmap = go.Heatmap(z=assembly_region,
-                         hoverinfo='x+y+text',
-                         # text=core_hover,
-                         # colorscale=colorscale,
-                         showscale=False,
-                         opacity=.5,
-                         xgap=1,
-                         ygap=1)
-
-    data = [centers]
+    graph_data.append(squares)
 
     layout = dict(
         title='Core Depiction',
         height=1350,
         width=1350,
-
         xaxis=dict(
-            range=[-.5, core_num_x - .5],
+            range=[-.5, core_x_dim - .5],
             zeroline=False,
             fixedrange=True,
             ticks='',
-            nticks=core_num_x + 1
+            nticks=core_x_dim + 1
         ),
         yaxis=dict(
-            range=[-.5, core_num_y - .5],
+            range=[-.5, core_y_dim - .5],
             zeroline=False,
             fixedrange=True,
             ticks='',
-            nticks=core_num_y + 1
+            nticks=core_y_dim + 1
         ),
     )
 
-    figure = go.Figure(data=data, layout=layout)
+    figure = go.Figure(data=graph_data, layout=layout)
 
-    return figure
+    return figure, core_data
 
+
+@app.callback(
+    Output('debug', 'children'),
+    [Input('core-stores', 'modified_timestamp')],
+    [State('core-stores', 'data')]
+)
+def show_core_data(timestamp, core_data):
+    return html.P('{}'.format(core_data))
 
 #######################################################################################################################
 # Root Geometry Selection
